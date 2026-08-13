@@ -16,6 +16,10 @@ class Property extends Model
         'user_id',
         'property_type',
         'title',
+        'owner_name',
+        'owner_phone',
+        'owner_dni',
+        'owner_email',
         'badge_left',
         'location',
         'address',
@@ -62,6 +66,27 @@ class Property extends Model
         'url_facebook',
         'status',
         'social_info_completed'
+    ];
+
+    /**
+     * Conversión de tipos de atributos (Casting)
+     */
+    protected $casts = [
+        'has_jardin' => 'boolean',
+        'has_balcon' => 'boolean',
+        'has_seguridad' => 'boolean',
+        'has_agua' => 'boolean',
+        'has_luz' => 'boolean',
+        'has_alcantarillado' => 'boolean',
+        'has_internet' => 'boolean',
+        'has_piscina' => 'boolean',
+        'has_bbq' => 'boolean',
+        'has_amoblado' => 'boolean',
+        'has_mascotas' => 'boolean',
+        'price_dropped' => 'boolean',
+        'price' => 'decimal:2',
+        'land_area_m2' => 'decimal:2',
+        'construction_area_m2' => 'decimal:2',
     ];
 
     public function images()

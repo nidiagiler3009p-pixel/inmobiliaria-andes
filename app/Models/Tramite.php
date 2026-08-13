@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Tramite extends Model
 {
     use HasFactory;
-
     protected $table = 'tramites';
 
     protected $fillable = [
@@ -27,6 +26,7 @@ class Tramite extends Model
         'email',
         'phone',
         'tramite_type',
+        'ubicacion',
         'subject',
         'message',
         'contact_preference',

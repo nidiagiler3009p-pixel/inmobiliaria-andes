@@ -17,43 +17,98 @@
     <!-- FILTROS -->
     <form method="GET" action="{{ route('gestion.citas') }}" class="bg-[#EFECE6] border border-[#D8D3C8] rounded-xl p-4 mb-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            
+            <!-- Asesor Asignado -->
             <div class="flex flex-col text-xs">
                 <label class="font-semibold text-[#1E392A] mb-1">Asesor Asignado:</label>
-                <select name="user_id" class="bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-sm text-[#2C3E35]">
+                <select name="advisor_id" class="bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-sm text-[#2C3E35]">
                     <option value="">Todos los asesores</option>
                     @foreach($asesores as $asesor)
-                        <option value="{{ $asesor->id }}" {{ request('user_id') == $asesor->id ? 'selected' : '' }}>
+                        <option value="{{ $asesor->id }}" {{ request('advisor_id') == $asesor->id ? 'selected' : '' }}>
                             {{ $asesor->name }} {{ $asesor->last_name ?? '' }}
                         </option>
                     @endforeach
                 </select>
             </div>
+
+            <!-- Propiedad -->
+            <div class="flex flex-col text-xs">
+                <label class="font-semibold text-[#1E392A] mb-1">Propiedad:</label>
+                <select name="property_id" class="bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-sm text-[#2C3E35]">
+                    <option value="">Todas las propiedades</option>
+                    @foreach($propiedades as $prop)
+                        <option value="{{ $prop->id }}" {{ request('property_id') == $prop->id ? 'selected' : '' }}>
+                            {{ $prop->code ?? 'PROP-'.$prop->id }} - {{ Str::limit($prop->title ?? 'Sin título', 25) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Estado -->
+            <div class="flex flex-col text-xs">
+                <label class="font-semibold text-[#1E392A] mb-1">Estado:</label>
+                <select name="status" class="bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-sm text-[#2C3E35]">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente" {{ request('status') == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
+                    <option value="Agendado" {{ request('status') == 'Agendado' ? 'selected' : '' }}>Agendado</option>
+                    <option value="Confirmada" {{ request('status') == 'Confirmada' ? 'selected' : '' }}>Confirmada</option>
+                    <option value="Realizado" {{ request('status') == 'Realizado' ? 'selected' : '' }}>Realizado</option>
+                    <option value="Cancelado" {{ request('status') == 'Cancelado' ? 'selected' : '' }}>Cancelado</option>
+                </select>
+            </div>
+
+            <!-- Fecha Desde -->
             <div class="flex flex-col text-xs">
                 <label class="font-semibold text-[#1E392A] mb-1">Desde:</label>
                 <input type="date" name="desde" value="{{ request('desde') }}" class="bg-white border border-[#D8D3C8] rounded-lg px-3 py-1.5 text-sm">
             </div>
+
+            <!-- Fecha Hasta -->
             <div class="flex flex-col text-xs">
                 <label class="font-semibold text-[#1E392A] mb-1">Hasta:</label>
                 <input type="date" name="hasta" value="{{ request('hasta') }}" class="bg-white border border-[#D8D3C8] rounded-lg px-3 py-1.5 text-sm">
             </div>
-            <div class="flex items-end">
+
+            <!-- Botones -->
+            <div class="flex items-end gap-2">
                 <button type="submit" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition h-[34px]">
                     <i class="fa-solid fa-filter mr-1"></i> Filtrar
                 </button>
+                @if(request()->anyFilled(['advisor_id', 'property_id', 'status', 'desde', 'hasta']))
+                    <a href="{{ route('gestion.citas') }}" class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-3 py-2 rounded-lg text-xs font-semibold shadow transition h-[34px] flex items-center">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Limpiar
+                    </a>
+                @endif
             </div>
         </div>
 
         <div class="w-full lg:w-auto flex justify-end">
-            <button type="button" onclick="openModal('new')" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow transition flex items-center gap-2">
+            <button type="button" onclick="openCreateModal()" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow transition flex items-center gap-2">
                 <i class="fa-solid fa-plus-circle"></i> Ingresar Nueva Cita Manual
             </button>
         </div>
     </form>
 
+    <!-- MENSAJES DE ALERTA -->
+    @if(session('success'))
+        <div class="bg-emerald-100 border border-emerald-400 text-emerald-800 px-4 py-3 rounded-xl mb-6 text-xs flex items-center justify-between">
+            <span><i class="fa-solid fa-circle-check mr-2"></i> {{ session('success') }}</span>
+            <button onclick="this.parentElement.remove()" class="text-emerald-800 font-bold">&times;</button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="bg-red-100 border border-red-400 text-red-800 px-4 py-3 rounded-xl mb-6 text-xs flex items-center justify-between">
+            <span><i class="fa-solid fa-triangle-exclamation mr-2"></i> {{ session('error') }}</span>
+            <button onclick="this.parentElement.remove()" class="text-red-800 font-bold">&times;</button>
+        </div>
+    @endif
+
     <!-- TABLA DE CITAS -->
     <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl p-4 shadow-sm overflow-hidden mb-8">
         <div class="flex justify-between items-center mb-4 px-2">
             <h2 class="text-lg font-bold text-[#1E392A]"><i class="fa-solid fa-list-check text-[#2C5E43] mr-2"></i> Listado General de Citas y Prospectos</h2>
+            <span class="text-xs text-[#556B5D] font-medium">Total de registros: {{ $appointments->count() }}</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -74,75 +129,144 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#D8D3C8]">
-                    @forelse($appointments as $appointment)   
+                    @forelse($appointments as $appointment) 
                         <tr class="hover:bg-[#F4F1EA] transition">
-                            <td class="p-2.5 font-mono font-bold text-[#2C5E43]">
-                                PROP-{{ $appointment->property_id ?? 'N/A' }}
+                            
+                            <!-- 1. PROPIEDAD -->
+                            <td class="p-2.5">
+                                @if($appointment->property)
+                                    <div class="font-bold text-[#2C5E43]">
+                                        {{ $appointment->property->title ?? $appointment->property->code ?? 'PROP-' . $appointment->property_id }}
+                                    </div>
+                                    <div class="text-[10px] text-gray-500">
+                                         {{ $appointment->property->owner_name ?? $appointment->property->user->name ?? 'N/A' }}
+                                    </div>
+                                @else
+                                    <span class="text-gray-500 font-mono italic">
+                                        {{ $appointment->property_id ? 'PROP-' . $appointment->property_id : 'N/A' }}
+                                    </span>
+                                @endif
                             </td>
+
                             <td class="p-2.5">
                                 {{ $appointment->user ? $appointment->user->name . ' ' . ($appointment->user->last_name ?? '') : 'Sin Asesor' }}
                             </td>
+
                             <td class="p-2.5 font-medium">
-                                {{ $appointment->client ? $appointment->client->name . ' ' . ($appointment->client->last_name ?? '') : 'Sin Cliente' }}
+                                @if($appointment->client)
+                                    {{ $appointment->client->first_name ?? $appointment->client->name ?? '' }} {{ $appointment->client->last_name ?? '' }}
+                                @else
+                                    <span class="text-gray-500 italic">Sin Cliente</span>
+                                @endif
                             </td>
+
                             <td class="p-2.5">
-                                {{ $appointment->client ? $appointment->client->phone : 'N/A' }}
+                                {{ $appointment->client->phone ?? $appointment->phone ?? 'N/A' }}
                             </td>
+
                             <td class="p-2.5">
-                                <span class="bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                                    {{ $appointment->source_channel ?? 'Web' }}
+                                <span class="bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                                    {{ $appointment->channel ?? $appointment->source_channel ?? 'Web' }}
                                 </span>
                             </td>
-                            <td class="p-2.5">
-                                {{ $appointment->location_reference ?? 'Matriz / Oficina' }}
-                            </td>
+
+                            <!-- 2. LUGAR / UBICACIÓN -->
+<td class="p-2.5">
+    <div class="flex flex-col gap-1">
+        
+        <!-- 1. REFERENCIA DEL CLIENTE (Destacado en primer lugar y más grande) -->
+        @if($appointment->location_reference)
+            <div class="flex items-center gap-1.5 font-semibold text-xs text-[#1E392A]">
+                <!-- Icono de Pin / Punto de Encuentro -->
+                <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>{{ $appointment->location_reference }}</span>
+            </div>
+        @else
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 italic">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>Por confirmar</span>
+            </div>
+        @endif
+
+        <!-- 2. UBICACIÓN DE LA PROPIEDAD (Secundario, más pequeño y en tono gris) -->
+        @if($appointment->property)
+            <div class="flex items-center gap-1.5 text-[11px] text-gray-500">
+                <!-- Icono de Casa / Inmueble -->
+                <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                <span>{{ $appointment->property->address ?? $appointment->property->city ?? 'Ubicación de propiedad' }}</span>
+            </div>
+        @endif
+
+    </div>
+</td>
+
                             <td class="p-2.5 font-semibold text-[#1E392A]">
-                                {{ $appointment->appointment_date ? \Carbon\Carbon::parse($appointment->appointment_date)->format('d/m/Y H:i') : 'Sin fecha fija' }}
+                                {{ $appointment->appointment_date ? \Carbon\Carbon::parse($appointment->appointment_date)->format('d/m/Y H:i') : 'Por Confirmar' }}
                             </td>
+
                             <td class="p-2.5">
                                 <span class="px-2 py-0.5 rounded font-semibold text-[10px]
-                                    {{ $appointment->priority == 'urgente' ? 'bg-red-100 text-red-800' : ($appointment->priority == 'alta' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800') }}">
+                                    {{ strtolower($appointment->priority) == 'urgente' ? 'bg-red-100 text-red-800 border border-red-200' : (strtolower($appointment->priority) == 'alta' ? 'bg-orange-100 text-orange-800 border border-orange-200' : 'bg-gray-100 text-gray-800 border border-gray-200') }}">
                                     {{ ucfirst($appointment->priority ?? 'normal') }}
                                 </span>
                             </td>
+
                             <td class="p-2.5">
                                 <span class="px-2 py-0.5 rounded font-semibold text-[10px] 
-                                    {{ $appointment->status == 'Confirmada' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                                    {{ $appointment->status == 'Confirmada' || $appointment->status == 'Realizado' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : ($appointment->status == 'Cancelado' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200') }}">
                                     {{ $appointment->status }}
                                 </span>
                             </td>
-                            <td class="p-2.5 text-gray-600 max-w-xs truncate" title="{{ $appointment->notes }}">
-                                {{ $appointment->notes ?: 'Sin observaciones' }}
+
+                            <!-- 3. OBSERVACIONES -->
+                            <td class="p-2.5 text-gray-600 max-w-xs whitespace-normal break-words">
+                                {!! $appointment->notes ? nl2br(e($appointment->notes)) : 'Sin observaciones' !!}
                             </td>
+
                             <td class="p-2.5 text-center flex items-center justify-center gap-1.5">
-                                <button type="button" onclick="openModal('edit', {
-                                    id: '{{ $appointment->id }}',
-                                    client_id: '{{ $appointment->client_id }}',
-                                    user_id: '{{ $appointment->user_id }}',
-                                    property_id: '{{ $appointment->property_id }}',
-                                    appointment_date: '{{ $appointment->appointment_date }}',
-                                    location_reference: '{{ $appointment->location_reference }}',
-                                    source_channel: '{{ $appointment->source_channel ?? '' }}',
-                                    type: '{{ $appointment->type }}',
-                                    priority: '{{ $appointment->priority }}',
-                                    status: '{{ $appointment->status }}',
-                                    notes: `{{ addslashes($appointment->notes) }}`
-                                })" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white p-1.5 rounded-lg shadow transition" title="Modificar Datos">
+                                <!-- Cambiar Estado -->
+                                <button type="button" 
+                                    onclick="openStatusModal('{{ $appointment->id }}', '{{ $appointment->status }}', '{{ addslashes($appointment->cancellation_reason ?? '') }}', {{ $appointment->rescued_to_portfolio ? 'true' : 'false' }})"
+                                    class="bg-amber-600 hover:bg-amber-700 text-white p-1.5 rounded-lg shadow transition" 
+                                    title="Cambiar Estado">
+                                    <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                                </button>
+
+                                <!-- Modificar Datos -->
+                                <button type="button" 
+                                    data-appointment='@json($appointment)'
+                                    onclick="openEditModal(this)" 
+                                    class="bg-[#2C5E43] hover:bg-[#1E392A] text-white p-1.5 rounded-lg shadow transition" 
+                                    title="Modificar Datos">
                                     <i class="fa-solid fa-pen text-xs"></i>
                                 </button>
                                 
-                                <form action="{{ route('gestion.citas.destroy', $appointment->id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta cita?');" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow transition" title="Eliminar Cita">
-                                        <i class="fa-solid fa-trash text-xs"></i>
-                                    </button>
-                                </form>
+                                <!-- CONDICIÓN DE BORRADO: Solo visible para el rol SYSTEMS -->
+                                @if(auth()->user()->role === 'SYSTEMS' || (method_exists(auth()->user(), 'hasRole') && auth()->user()->hasRole('SYSTEMS')))
+                                    <form action="{{ route('gestion.citas.destroy', $appointment->id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta cita?');" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow transition" title="Eliminar Cita">
+                                            <i class="fa-solid fa-trash text-xs"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="p-4 text-center text-gray-500">No hay citas registradas.</td>
+                            <td colspan="11" class="p-6 text-center text-gray-500">
+                                <i class="fa-solid fa-calendar-xmark text-2xl mb-2 text-[#556B5D] block"></i>
+                                No hay citas registradas con los filtros seleccionados.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -151,13 +275,13 @@
     </div>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL REGISTRO / EDICIÓN DE CITA -->
 <div id="appointment-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
     <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         
         <div class="bg-[#2C5E43] text-white px-6 py-4 flex justify-between items-center">
             <h3 id="modal-title" class="font-bold text-base"><i class="fa-solid fa-calendar-plus mr-2"></i> Ingresar Nueva Cita</h3>
-            <button type="button" onclick="closeModal()" class="text-white hover:text-gray-200 text-lg"><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" onclick="closeModal('appointment-modal')" class="text-white hover:text-gray-200 text-lg"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
         <form id="appointment-form" method="POST" action="{{ route('gestion.citas.store') }}" class="p-6 overflow-y-auto space-y-4 text-xs">
@@ -170,7 +294,7 @@
                 <div class="md:col-span-2 bg-[#F9F7F2] p-4 rounded-xl border border-[#D8D3C8]">
                     <div class="flex justify-between items-center mb-3">
                         <label class="font-bold text-[#1E392A] text-sm"><i class="fa-solid fa-user-tag mr-1 text-[#2C5E43]"></i> Datos del Cliente / Prospecto</label>
-                        <button type="button" onclick="toggleClientMode()" class="text-[#2C5E43] hover:underline font-semibold text-xs bg-white border border-[#2C5E43] px-3 py-1 rounded-lg shadow-sm">
+                        <button type="button" id="toggle-client-btn" onclick="toggleClientMode()" class="text-[#2C5E43] hover:underline font-semibold text-xs bg-white border border-[#2C5E43] px-3 py-1 rounded-lg shadow-sm">
                             <span id="toggle-client-text">Registrar nuevo cliente en lugar de seleccionar</span>
                         </button>
                     </div>
@@ -180,15 +304,17 @@
                         <label class="text-[#556B5D] block mb-1 font-medium">Seleccionar de la lista de clientes registrados:</label>
                         <select name="client_id" id="field-client-id" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-[#2C3E35]">
                             <option value="">Seleccione un cliente...</option>
-                            @isset($clients)
-                                @foreach($clients as $client)
-                                    <option value="{{ $client->id }}">{{ $client->name }} {{ $client->last_name ?? '' }} - Tel: {{ $client->phone }}</option>
+                            @isset($clientes)
+                                @foreach($clientes as $cliente)
+                                    <option value="{{ $cliente->id }}">
+                                        {{ $cliente->first_name ?? $cliente->name }} {{ $cliente->last_name ?? '' }} - Tel: {{ $cliente->phone }}
+                                    </option>
                                 @endforeach
                             @endisset
                         </select>
                     </div>
 
-                    <!-- Opción B: Crear nuevo cliente con todos sus datos -->
+                    <!-- Opción B: Crear nuevo cliente -->
                     <div id="new-client-container" class="hidden space-y-3">
                         <p class="text-[11px] text-[#2C5E43] font-semibold italic">Ingrese los datos completos del nuevo cliente para guardarlo automáticamente en el sistema:</p>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -214,8 +340,9 @@
 
                 <!-- ASESOR ASIGNADO -->
                 <div>
-                    <label class="font-semibold text-[#1E392A] block mb-1">Asesor Asignado</label>
+                    <label class="font-semibold text-[#1E392A] block mb-1">Asesor Asignado *</label>
                     <select name="user_id" id="field-user" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-[#2C3E35]" required>
+                        <option value="">Seleccione un asesor...</option>
                         @foreach($asesores as $asesor)
                             <option value="{{ $asesor->id }}">{{ $asesor->name }} {{ $asesor->last_name ?? '' }}</option>
                         @endforeach
@@ -227,9 +354,11 @@
                     <label class="font-semibold text-[#1E392A] block mb-1">Propiedad del Catálogo</label>
                     <select name="property_id" id="field-property" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-[#2C3E35]">
                         <option value="">Seleccione una propiedad...</option>
-                        @isset($properties)
-                            @foreach($properties as $property)
-                                <option value="{{ $property->id }}">PROP-{{ $property->id }} | {{ $property->title ?? 'Sin título' }}</option>
+                        @isset($propiedades)
+                            @foreach($propiedades as $propiedad)
+                                <option value="{{ $propiedad->id }}">
+                                    {{ $propiedad->code ?? 'PROP-'.$propiedad->id }} | {{ Str::limit($propiedad->title ?? 'Sin título', 30) }}
+                                </option>
                             @endforeach
                         @endisset
                     </select>
@@ -243,8 +372,8 @@
 
                 <!-- LUGAR / UBICACIÓN -->
                 <div>
-                    <label class="font-semibold text-[#1E392A] block mb-1">Lugar de Cita / Ubicación</label>
-                    <input type="text" name="location_reference" id="field-location" placeholder="Ej. Oficina Quito / Riobamba / Guano" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2">
+                    <label class="font-semibold text-[#1E392A] block mb-1">Lugar de Cita / Ubicación *</label>
+                    <input type="text" name="location_reference" id="field-location" placeholder="Ej. Oficina Quito / Riobamba / Guano" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2" required>
                 </div>
 
                 <!-- FECHA Y HORA -->
@@ -255,8 +384,8 @@
 
                 <!-- TIPO DE GESTIÓN -->
                 <div>
-                    <label class="font-semibold text-[#1E392A] block mb-1">Tipo de Gestión</label>
-                    <select name="type" id="field-type" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2">
+                    <label class="font-semibold text-[#1E392A] block mb-1">Tipo de Gestión *</label>
+                    <select name="type" id="field-type" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2" required>
                         <option value="visita">Visita</option>
                         <option value="reunion">Reunión</option>
                         <option value="tarea">Tarea</option>
@@ -265,8 +394,8 @@
 
                 <!-- PRIORIDAD -->
                 <div>
-                    <label class="font-semibold text-[#1E392A] block mb-1">Prioridad</label>
-                    <select name="priority" id="field-priority" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2">
+                    <label class="font-semibold text-[#1E392A] block mb-1">Prioridad *</label>
+                    <select name="priority" id="field-priority" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2" required>
                         <option value="normal">Normal</option>
                         <option value="alta">Alta</option>
                         <option value="urgente">Urgente</option>
@@ -275,11 +404,13 @@
 
                 <!-- ESTADO -->
                 <div>
-                    <label class="font-semibold text-[#1E392A] block mb-1">Estado</label>
-                    <select name="status" id="field-status" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2">
+                    <label class="font-semibold text-[#1E392A] block mb-1">Estado *</label>
+                    <select name="status" id="field-status" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2" required>
                         <option value="Pendiente">Pendiente</option>
+                        <option value="Agendado">Agendado</option>
                         <option value="Confirmada">Confirmada</option>
-                        <option value="Atendida">Atendida</option>
+                        <option value="Realizado">Realizado</option>
+                        <option value="Cancelado">Cancelado</option>
                     </select>
                 </div>
             </div>
@@ -291,8 +422,52 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-3 border-t border-[#D8D3C8]">
-                <button type="button" onclick="closeModal()" class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-4 py-2 rounded-lg font-medium transition">Cancelar</button>
+                <button type="button" onclick="closeModal('appointment-modal')" class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-4 py-2 rounded-lg font-medium transition">Cancelar</button>
                 <button type="submit" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-6 py-2 rounded-lg font-medium transition shadow">Guardar Cita</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL CAMBIAR ESTADO / CANCELACIÓN -->
+<div id="status-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+        <div class="bg-[#2C5E43] text-white px-6 py-4 flex justify-between items-center">
+            <h3 class="font-bold text-base"><i class="fa-solid fa-arrows-rotate mr-2"></i> Cambiar Estado de Cita</h3>
+            <button type="button" onclick="closeModal('status-modal')" class="text-white hover:text-gray-200 text-lg"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <form id="status-form" method="POST" action="" class="p-6 space-y-4 text-xs">
+            @csrf
+            @method('PATCH')
+
+            <div>
+                <label class="font-semibold text-[#1E392A] block mb-1">Nuevo Estado *</label>
+                <select name="status" id="status-select" onchange="toggleCancellationFields()" class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-[#2C3E35]" required>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Agendado">Agendado</option>
+                    <option value="Confirmada">Confirmada</option>
+                    <option value="Realizado">Realizado</option>
+                    <option value="Cancelado">Cancelado</option>
+                </select>
+            </div>
+
+            <!-- Campos Condicionales para Cancelado -->
+            <div id="cancellation-fields" class="hidden space-y-3 bg-[#F9F7F2] p-3 rounded-xl border border-[#D8D3C8]">
+                <div>
+                    <label class="font-semibold text-[#1E392A] block mb-1">Motivo de Cancelación *</label>
+                    <textarea name="cancellation_reason" id="status-reason" rows="3" placeholder="Explique por qué se canceló la cita..." class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"></textarea>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" name="rescue_to_portfolio" id="status-rescue" value="1" class="rounded border-[#D8D3C8] text-[#2C5E43] focus:ring-[#2C5E43]">
+                    <label for="status-rescue" class="font-medium text-[#1E392A] text-xs">Rescatar cliente a Cartera General</label>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#D8D3C8]">
+                <button type="button" onclick="closeModal('status-modal')" class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-4 py-2 rounded-lg font-medium transition">Cancelar</button>
+                <button type="submit" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-5 py-2 rounded-lg font-medium transition shadow">Actualizar Estado</button>
             </div>
         </form>
     </div>
@@ -312,12 +487,12 @@
             newContainer.classList.remove('hidden');
             existingContainer.classList.add('hidden');
             toggleText.textContent = '← Volver a seleccionar cliente existente';
-            document.getElementById('field-client-id').value = ''; // limpiar select
+            document.getElementById('field-client-id').value = ''; 
         } else {
             newContainer.classList.add('hidden');
             existingContainer.classList.remove('hidden');
             toggleText.textContent = 'Registrar nuevo cliente en lugar de seleccionar';
-            // Limpiar inputs de nuevo cliente
+            
             document.getElementById('field-new-name').value = '';
             document.getElementById('field-new-lastname').value = '';
             document.getElementById('field-new-phone').value = '';
@@ -325,7 +500,7 @@
         }
     }
 
-    function openModal(mode, data = {}) {
+    function openCreateModal() {
         const modal = document.getElementById('appointment-modal');
         const form = document.getElementById('appointment-form');
         const title = document.getElementById('modal-title');
@@ -333,36 +508,85 @@
 
         modal.classList.remove('hidden');
 
-        // Resetear modo cliente al abrir
         if (isNewClientMode) {
             toggleClientMode();
         }
 
-        if (mode === 'new') {
-            title.innerHTML = '<i class="fa-solid fa-calendar-plus mr-2"></i> Ingresar Nueva Cita';
-            form.action = "{{ route('gestion.citas.store') }}";
-            methodField.innerHTML = '';
-            form.reset();
-        } else if (mode === 'edit') {
-            title.innerHTML = '<i class="fa-solid fa-user-pen mr-2"></i> Modificar Cita';
-            form.action = "/intranet/citas/" + data.id; 
-            methodField.innerHTML = '<input type="hidden" name="_method" value="PUT">';
-
-            document.getElementById('field-client-id').value = data.client_id || '';
-            document.getElementById('field-user').value = data.user_id || '';
-            document.getElementById('field-property').value = data.property_id || '';
-            document.getElementById('field-source-channel').value = data.source_channel || '';
-            document.getElementById('field-location').value = data.location_reference || '';
-            document.getElementById('field-date').value = data.appointment_date ? data.appointment_date.replace(' ', 'T').slice(0, 16) : '';
-            document.getElementById('field-type').value = data.type || 'visita';
-            document.getElementById('field-priority').value = data.priority || 'normal';
-            document.getElementById('field-status').value = data.status || 'Pendiente';
-            document.getElementById('field-notes').value = data.notes || '';
+        title.innerHTML = '<i class="fa-solid fa-calendar-plus mr-2"></i> Ingresar Nueva Cita Manual';
+        form.action = "{{ route('gestion.citas.store') }}";
+        methodField.innerHTML = '';
+        form.reset();
+        
+        const defaultUser = "{{ auth()->id() }}";
+        if (defaultUser) {
+            document.getElementById('field-user').value = defaultUser;
         }
     }
 
-    function closeModal() {
-        document.getElementById('appointment-modal').classList.add('hidden');
+    function openEditModal(button) {
+        const data = JSON.parse(button.getAttribute('data-appointment'));
+        const modal = document.getElementById('appointment-modal');
+        const form = document.getElementById('appointment-form');
+        const title = document.getElementById('modal-title');
+        const methodField = document.getElementById('method-field');
+
+        modal.classList.remove('hidden');
+
+        if (isNewClientMode) {
+            toggleClientMode();
+        }
+
+        title.innerHTML = '<i class="fa-solid fa-user-pen mr-2"></i> Modificar Cita #' + data.id;
+        form.action = "/intranet/citas/" + data.id; 
+        methodField.innerHTML = '<input type="hidden" name="_method" value="PUT">';
+
+        document.getElementById('field-client-id').value = data.client_id || '';
+        document.getElementById('field-[#field-user]').value = data.user_id || '';
+        document.getElementById('field-property').value = data.property_id || '';
+        document.getElementById('field-source-channel').value = data.source_channel || data.channel || '';
+        document.getElementById('field-location').value = data.location_reference || '';
+        
+        if (data.appointment_date) {
+            document.getElementById('field-date').value = data.appointment_date.replace(' ', 'T').substring(0, 16);
+        } else {
+            document.getElementById('field-date').value = '';
+        }
+
+        document.getElementById('field-type').value = data.type || 'visita';
+        document.getElementById('field-priority').value = data.priority || 'normal';
+        document.getElementById('field-status').value = data.status || 'Pendiente';
+        document.getElementById('field-notes').value = data.notes || '';
+    }
+
+    function openStatusModal(id, currentStatus, reason = '', rescued = false) {
+        const modal = document.getElementById('status-modal');
+        const form = document.getElementById('status-form');
+
+        form.action = '/intranet/citas/' + id + '/status';
+        document.getElementById('status-select').value = currentStatus;
+        document.getElementById('status-reason').value = reason;
+        document.getElementById('status-rescue').checked = rescued;
+
+        toggleCancellationFields();
+        modal.classList.remove('hidden');
+    }
+
+    function toggleCancellationFields() {
+        const statusSelect = document.getElementById('status-select');
+        const cancellationFields = document.getElementById('cancellation-fields');
+        const reasonInput = document.getElementById('status-reason');
+
+        if (statusSelect.value === 'Cancelado') {
+            cancellationFields.classList.remove('hidden');
+            reasonInput.setAttribute('required', 'required');
+        } else {
+            cancellationFields.classList.add('hidden');
+            reasonInput.removeAttribute('required');
+        }
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
     }
 </script>
 @endsection

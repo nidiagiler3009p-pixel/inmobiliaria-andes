@@ -286,7 +286,7 @@ class PropertyController extends Controller
         $user = auth()->user();
 
         // Verificamos si el usuario autenticado tiene el rol de asesor
-        if ($user && $user->hasRole('asesor')) {
+        if ($user && $user->role === 'Asesor') {
             // El asesor solo valida sus campos correspondientes
             $request->validate([
                 'url_youtube'    => 'nullable|string|max:255',
@@ -385,4 +385,5 @@ class PropertyController extends Controller
 
         return redirect('/intranet/properties')->with('success', 'Propiedad eliminada correctamente.');
     }
+
 }

@@ -3,7 +3,7 @@
 @section('admin_content')
 <div class="max-w-4xl mx-auto px-4 pb-12 font-sans">
     <div class="flex justify-between items-center mb-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-emerald-100 shadow-sm">
-        <h2 class="text-base font-extrabold text-[#2C4A3E] uppercase"><i class="fa-solid fa-pen-to-square mr-2"></i> Editar Propiedad: {{ $property->title }}</h2>
+        <h2 class="text-base font-extrabold text-[#2C4A3E] uppercase"><i class="fa-solid fa-pen-to-square mr-2"></i> Editar Propiedad #{{ $property->id }}</h2>
         <a href="{{ route('properties.index') }}" class="text-xs font-bold text-emerald-700 hover:underline">‹ Volver al Catálogo</a>
     </div>
 
@@ -56,7 +56,36 @@
                 </select>
             </div>
 
+            <!-- Datos del Propietario -->
+            <div class="md:col-span-2 pt-4 border-t border-emerald-100">
+                <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase mb-4"><i class="fa-solid fa-user-shield mr-2"></i> Datos del Propietario</h3>
+            </div>
+
+            <div>
+                <label class="block mb-2 uppercase text-[10px] text-gray-500">Nombre del Propietario</label>
+                <input type="text" name="owner_name" value="{{ old('owner_name', $property->owner_name) }}" placeholder="Ej: Juan Pérez" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+                <label class="block mb-2 uppercase text-[10px] text-gray-500">Teléfono del Propietario</label>
+                <input type="text" name="owner_phone" value="{{ old('owner_phone', $property->owner_phone) }}" placeholder="Ej: 0991234567" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+                <label class="block mb-2 uppercase text-[10px] text-gray-500">Cédula / DNI del Propietario</label>
+                <input type="text" name="owner_dni" value="{{ old('owner_dni', $property->owner_dni) }}" placeholder="Ej: 0601234567" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div>
+                <label class="block mb-2 uppercase text-[10px] text-gray-500">Correo del Propietario</label>
+                <input type="email" name="owner_email" value="{{ old('owner_email', $property->owner_email) }}" placeholder="ejemplo@correo.com" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+
             <!-- 2. Información General y Ubicación -->
+            <div class="md:col-span-2 pt-4 border-t border-emerald-100">
+                <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase mb-4"><i class="fa-solid fa-location-dot mr-2"></i> Información General y Ubicación</h3>
+            </div>
+
             <div class="md:col-span-2">
                 <label class="block mb-2 uppercase text-[10px] text-gray-500">Título de la Propiedad</label>
                 <input type="text" name="title" value="{{ old('title', $property->title) }}" required placeholder="Ej: CASA DE VENTA EN CONJUNTO" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
@@ -117,7 +146,7 @@
 
             <div>
                 <label class="block mb-2 uppercase text-[10px] text-gray-500">Áreas Sociales (Salas)</label>
-                <input type="text" name="social_areas" value="{{ old('social_areas', $property->social_areas) }}" placeholder="Ej: 1 Amplia Sala y 1 de Star" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <input type="text" name="social_areas" value="{{ old('social_areas', $property->social_areas) }}" placeholder="Ej: 1 Amplia Sala y 1 de Estar" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
             <div>
                 <label class="block mb-2 uppercase text-[10px] text-gray-500">Cocina</label>
@@ -168,6 +197,31 @@
                     <input type="checkbox" name="has_alcantarillado" value="1" {{ old('has_alcantarillado', $property->has_alcantarillado) ? 'checked' : '' }} class="rounded border-emerald-300 text-[#2C4A3E] focus:ring-emerald-500 w-4 h-4">
                     <span class="text-xs font-bold text-[#2C4A3E]">Alcantarillado</span>
                 </label>
+
+                <label class="flex items-center space-x-2.5 cursor-pointer">
+                    <input type="checkbox" name="has_internet" value="1" {{ old('has_internet', $property->has_internet) ? 'checked' : '' }} class="rounded border-emerald-300 text-[#2C4A3E] focus:ring-emerald-500 w-4 h-4">
+                    <span class="text-xs font-bold text-[#2C4A3E]">Internet / Fibra</span>
+                </label>
+
+                <label class="flex items-center space-x-2.5 cursor-pointer">
+                    <input type="checkbox" name="has_piscina" value="1" {{ old('has_piscina', $property->has_piscina) ? 'checked' : '' }} class="rounded border-emerald-300 text-[#2C4A3E] focus:ring-emerald-500 w-4 h-4">
+                    <span class="text-xs font-bold text-[#2C4A3E]">Piscina</span>
+                </label>
+
+                <label class="flex items-center space-x-2.5 cursor-pointer">
+                    <input type="checkbox" name="has_bbq" value="1" {{ old('has_bbq', $property->has_bbq) ? 'checked' : '' }} class="rounded border-emerald-300 text-[#2C4A3E] focus:ring-emerald-500 w-4 h-4">
+                    <span class="text-xs font-bold text-[#2C4A3E]">Área BBQ / Asador</span>
+                </label>
+
+                <label class="flex items-center space-x-2.5 cursor-pointer">
+                    <input type="checkbox" name="has_amoblado" value="1" {{ old('has_amoblado', $property->has_amoblado) ? 'checked' : '' }} class="rounded border-emerald-300 text-[#2C4A3E] focus:ring-emerald-500 w-4 h-4">
+                    <span class="text-xs font-bold text-[#2C4A3E]">Amoblado</span>
+                </label>
+
+                <label class="flex items-center space-x-2.5 cursor-pointer">
+                    <input type="checkbox" name="has_mascotas" value="1" {{ old('has_mascotas', $property->has_mascotas) ? 'checked' : '' }} class="rounded border-emerald-300 text-[#2C4A3E] focus:ring-emerald-500 w-4 h-4">
+                    <span class="text-xs font-bold text-[#2C4A3E]">Acepta Mascotas</span>
+                </label>
             </div>
 
             <!-- 4. Precio, Documentación y Medidas -->
@@ -213,8 +267,8 @@
             <div>
                 <label class="block mb-2 uppercase text-[10px] text-gray-500">¿Bajó de Precio?</label>
                 <select name="price_dropped" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
-                    <option value="0" {{ old('price_dropped', $property->price_dropped) == '0' ? 'selected' : '' }}>No</option>
-                    <option value="1" {{ old('price_dropped', $property->price_dropped) == '1' ? 'selected' : '' }}>Sí (Mostrar en sección Bajaron de Precio)</option>
+                    <option value="0" {{ old('price_dropped', $property->price_dropped) == '0' || old('price_dropped', $property->price_dropped) == 0 ? 'selected' : '' }}>No</option>
+                    <option value="1" {{ old('price_dropped', $property->price_dropped) == '1' || old('price_dropped', $property->price_dropped) == 1 ? 'selected' : '' }}>Sí (Mostrar en sección Bajaron de Precio)</option>
                 </select>
             </div>
             <div>
@@ -229,9 +283,9 @@
 
             <!-- Fotografías para la Galería -->
             <div class="md:col-span-2 pt-4 border-t border-emerald-100">
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Agregar Nuevas Fotografías (Galería Múltiple)</label>
+                <label class="block mb-2 uppercase text-[10px] text-gray-500">Agregar o Actualizar Fotografías (Galería Múltiple)</label>
                 <input type="file" name="images[]" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2C4A3E] file:text-white hover:file:bg-emerald-800 cursor-pointer">
-                <span class="text-[10px] text-gray-400 mt-1 block">Subir archivos nuevos añadirá más imágenes a la galería actual de la propiedad.</span>
+                <p class="text-[10px] text-gray-400 mt-1">Selecciona nuevas imágenes solo si deseas agregar más fotos a la galería existente.</p>
             </div>
 
             <!-- 6. Redes Sociales y Difusión -->
@@ -260,8 +314,8 @@
             </div>
 
             <div>
-                <label class="block mb-2 uppercase text-[10px] text-gray-500"><i class="fa-solid fa-phone text-emerald-700 mr-1"></i> Teléfono de Contacto (WhatsApp)</label>
-                <input type="text" name="contact_phone" value="{{ old('contact_phone', $property->contact_phone) }}" placeholder="Ej: 0988059187" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label class="block mb-2 uppercase text-[10px] text-gray-500"><i class="fa-solid fa-phone text-emerald-700 mr-1"></i> Teléfono WhatsApp (Difusión)</label>
+                <input type="text" name="whatsapp_phone" value="{{ old('whatsapp_phone', $property->whatsapp_phone) }}" placeholder="Ej: 0988059187" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div>

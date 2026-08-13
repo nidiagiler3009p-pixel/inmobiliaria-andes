@@ -278,6 +278,13 @@
                             </div>
                         </div>
 
+                        <!-- Fila 3: Ubicación o Dirección debajo de los campos anteriores -->
+                        <div class="tramites-form-group mb-3">
+                            <label>Ubicación / Dirección <span class="text-danger">*</span></label>
+                            <input type="text" name="location" value="{{ old('location') }}" class="form-control @error('location') is-invalid @enderror" placeholder="Ej: Av. Principal y Secundaria, Quito" required>
+                            @error('location') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+
                         <!-- Información del trámite -->
                         <div class="section-category-title mt-4">Información del trámite</div>
                         
@@ -292,12 +299,6 @@
                                 <option value="Otros trámites" {{ old('tramite_type') == 'Otros trámites' ? 'selected' : '' }}>Otros trámites</option>
                             </select>
                             @error('tramite_type') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-
-                        <div class="tramites-form-group mb-3">
-                            <label>Asunto / Referencia <span class="text-danger">*</span></label>
-                            <input type="text" name="subject" value="{{ old('subject') }}" class="form-control @error('subject') is-invalid @enderror" placeholder="Ej: Compra de casa, Arriendo de departamento, Asesoría legal, etc." required>
-                            @error('subject') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 
                         <div class="tramites-form-group mb-4">

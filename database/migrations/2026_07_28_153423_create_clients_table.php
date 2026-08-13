@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->string('last_name');
             $table->string('identification_card')->nullable();
             $table->string('phone');
-            $table->string('email');
+            $table->string('email')->nullable()->change();
             
             $table->string('social_media_source')->nullable(); // WhatsApp, Instagram DM, Facebook Messenger, TikTok
             $table->enum('status', [

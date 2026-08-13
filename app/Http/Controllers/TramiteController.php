@@ -71,74 +71,73 @@ class TramiteController extends Controller
         $tramite->delete();
         return redirect()->route('tramites.index')->with('success', 'Trámite eliminado del sistema.');
     }
-
-    // ==========================================
-    // 2. MÉTODO PARA EL FORMULARIO PÚBLICO (WEB)
-    // ==========================================
-
-    public function storePublic(Request $request)
+public function storePublic(Request $request)
     {
         // 1. Validar los datos que envía el usuario desde la web pública
         $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'identification_card' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
-            'phone' => 'required|string|max:50',
-            'tramite_type' => 'required|string',
-            'subject' => 'required|string|max:255',
-            'message' => 'required|string|max:500',
-            'contact_preference' => 'required|string',
+            'first_name'              => 'required|string|max:255',
+            'last_name'               => 'required|string|max:255',
+            'identification_card'     => 'required|string|max:20',
+            'email'                   => 'required|email|max:255',
+            'phone'                   => 'required|string|max:50',
+            'location'                => 'required|string|max:255', // Coincide con el name="location" de tu vista
+            'tramite_type'            => 'required|string',
+            'message'                 => 'required|string|max:500',
+            'contact_preference'      => 'required|string',
             'accepted_privacy_policy' => 'required',
         ]);
 
-        // 2. Guardar en la Base de Datos con los campos de la tabla
+        // 2. Guardar en la Base de Datos mapeando 'location' a la columna 'ubicacion'
         $tramite = Tramite::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'identification_card' => $request->identification_card,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'tramite_type' => $request->tramite_type,
-            'subject' => $request->subject,
-            'message' => $request->message,
-            'contact_preference' => $request->contact_preference,
-            'accepted_privacy_policy' => $request->has('accepted_privacy_policy') ? 1 : 0,
-            'status' => 'Pendiente', // Valor por defecto para solicitudes web
+            'first_name'              => $request->first_name,
+            'last_name'               => $request->last_name,
+            'identification_card'     => $request->identification_card,
+            'email'                   => $request->email,
+            'phone'                   => $request->phone,
+            'tramite_type'            => $request->tramite_type,
+            'ubicacion'               => $request->location, // Aquí guardamos la ubicación ingresada
+            'subject'                 => 'Solicitud web: ' . $request->tramite_type, // Valor automático para evitar errores de base de datos
+            'message'                 => $request->message,
+            'contact_preference'      => $request->contact_preference,
+            'accepted_privacy_policy' => 1,
+            'status'                  => 'Pendiente',
         ]);
-// 3. NUEVO: Crear el registro espejo en la tabla centralizadora
-\App\Models\AppointmentTracking::create([
-    'user_id'           => 1,
-    'type'              => 'tramite',
-    'source_channel'    => 'Web - Trámites (' . $tramite->tramite_type . ')',
-    'location_reference'=> 'Trámite: ' . $tramite->subject,
-    'status'            => 'Pendiente',
-    'priority'          => 'normal',
-    'notes'             => $tramite->message,
-]);
 
+        // 3. Crear el registro espejo en la tabla centralizadora
+        \App\Models\AppointmentTracking::create([
+            'user_id'           => 1,
+            'type'              => 'tramite',
+            'source_channel'    => 'Web - Trámites (' . $tramite->tramite_type . ')',
+            'location_reference'=> 'Ubicación: ' . $tramite->ubicacion,
+            'status'            => 'Pendiente',
+            'priority'          => 'normal',
+            'notes'             => $tramite->message,
+        ]);
 
-        // 3. Enviar el correo de notificación a la inmobiliaria
+        // 4. Enviar el correo de notificación a la inmobiliaria
         $correosDestino = [
             'inmobilirialosandesecuador@gmail.com'
-            // Puedes agregar más correos separados por comas aquí si lo deseas:
-            // 'otrocorreo@gmail.com'
         ];
 
-        Mail::raw("Se ha recibido una nueva solicitud de trámite desde la web:\n\n" .
-                  "• Cliente: {$tramite->first_name} {$tramite->last_name}\n" .
-                  "• Cédula: {$tramite->identification_card}\n" .
-                  "• Correo: {$tramite->email}\n" .
-                  "• Teléfono: {$tramite->phone}\n" .
-                  "• Tipo de Trámite: {$tramite->tramite_type}\n" .
-                  "• Asunto: {$tramite->subject}\n" .
-                  "• Preferencia de contacto: {$tramite->contact_preference}\n\n" .
-                  "Mensaje del cliente:\n{$tramite->message}", function ($message) use ($correosDestino, $tramite) {
-            $message->to($correosDestino)
-                    ->subject('Nueva solicitud de trámite: ' . $tramite->subject);
-        });
+        try {
+            Mail::raw("Se ha recibido una nueva solicitud de trámite desde la web:\n\n" .
+                      "• Cliente: {$tramite->first_name} {$tramite->last_name}\n" .
+                      "• Cédula: {$tramite->identification_card}\n" .
+                      "• Correo: {$tramite->email}\n" .
+                      "• Teléfono: {$tramite->phone}\n" .
+                      "• Tipo de Trámite: {$tramite->tramite_type}\n" .
+                      "• Ubicación: {$tramite->ubicacion}\n" .
+                      "• Preferencia de contacto: {$tramite->contact_preference}\n\n" .
+                      "Mensaje del cliente:\n{$tramite->message}", function ($message) use ($correosDestino, $tramite) {
+                $message->to($correosDestino)
+                        ->subject('Nueva solicitud de trámite: ' . $tramite->tramite_type);
+            });
+        } catch (\Exception $e) {
+            // Evita que falle el flujo si hay un problema puntual con el servidor de correo
+        }
 
-        // 4. Redireccionar con mensaje de éxito
+        // 5. Redireccionar con mensaje de éxito
         return redirect()->back()->with('success', '¡Tu solicitud de trámite ha sido enviada con éxito!');
     }
-}   
+}
+
