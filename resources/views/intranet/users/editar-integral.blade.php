@@ -1,28 +1,43 @@
 @extends('layouts.admin')
 
 @section('admin_content')
+@php
+    // Normalizar la variable $tipo para evitar fallos por tildes o prefijos
+    $tipoNorm = strtolower(str_replace(['á', 'é', 'í', 'ó', 'ú', '_'], ['a', 'e', 'i', 'o', 'u', ''], $tipo));
+    if (str_contains($tipoNorm, 'tramite')) {
+        $tipoClean = 'tramite';
+    } elseif (str_contains($tipoNorm, 'asesor')) {
+        $tipoClean = 'asesoria';
+    } else {
+        $tipoClean = 'contacto';
+    }
+
+    // Armar el ID compuesto si no lo trae
+    $routeId = str_contains((string)$item->id, '_') ? $item->id : ($tipoClean . '_' . $item->id);
+@endphp
+
 <div class="flex-grow p-6 max-w-4xl mx-auto w-full text-[#2C3E35] font-sans antialiased">
     <header class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl p-6 shadow-sm mb-6">
-        <h1 class="text-2xl font-bold text-[#1E392A]">Editar Registro: {{ ucfirst($tipo) }}</h1>
+        <h1 class="text-2xl font-bold text-[#1E392A]">Editar Registro: {{ ucfirst($tipoClean) }}</h1>
         <p class="text-sm text-[#556B5D] mt-1">Actualiza los datos del prospecto seleccionado o transmuta su tipo de registro.</p>
     </header>
 
     <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl p-6 shadow-sm">
-        <form action="{{ route('admin.citas.update', $item->id) }}" method="POST">
+        <form action="{{ route('admin.citas.update', $routeId) }}" method="POST">
             @csrf
             @method('PUT')
 
             <!-- Identificadores del registro original -->
-            <input type="hidden" name="tipo_origen" value="{{ $tipo }}">
+            <input type="hidden" name="tipo_origen" value="{{ $tipoClean }}">
             <input type="hidden" name="id" value="{{ $item->id }}">
 
             <!-- Selector para Cambiar de Tipo (Transmutación) -->
             <div class="mb-6 pb-4 border-b border-[#D8D3C8]">
                 <label for="nuevo_tipo" class="block text-xs font-bold mb-1 text-[#1E392A]">Tipo de Registro / Origen</label>
                 <select name="nuevo_tipo" id="nuevo_tipo" class="w-full p-2.5 border border-[#D8D3C8] rounded-xl text-xs bg-white font-semibold shadow-sm focus:ring-2 focus:ring-[#2C5E43] focus:outline-none">
-                    <option value="contacto" {{ old('nuevo_tipo', $tipo) === 'contacto' ? 'selected' : '' }}>Contacto</option>
-                    <option value="asesoria" {{ old('nuevo_tipo', $tipo) === 'asesoria' ? 'selected' : '' }}>Asesoría</option>
-                    <option value="tramite" {{ old('nuevo_tipo', $tipo) === 'tramite' ? 'selected' : '' }}>Trámite</option>
+                    <option value="contacto" {{ old('nuevo_tipo', $tipoClean) === 'contacto' ? 'selected' : '' }}>Contacto</option>
+                    <option value="asesoria" {{ old('nuevo_tipo', $tipoClean) === 'asesoria' ? 'selected' : '' }}>Asesoría</option>
+                    <option value="tramite" {{ old('nuevo_tipo', $tipoClean) === 'tramite' ? 'selected' : '' }}>Trámite</option>
                 </select>
                 <p class="text-[10px] text-[#556B5D] mt-1">Al cambiar la opción, se mostrarán los campos requeridos para el nuevo tipo y el registro se migrará automáticamente.</p>
             </div>
@@ -87,7 +102,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold mb-1">Tipo de Trámite</label>
-                    <input type="text" name="tramite_type" value="{{ old('tramite_type', $item->tramite_type ?? '') }}" placeholder="Ej: Promesa de compraventa, Escrituración" class="w-full p-2 border border-[#D8D3C8] rounded-xl text-xs bg-white">
+                    <input type="text" name="tramite_type" value="{{ old('tramite_type', $item->tramite_type ?? '') }}" placeholder="Ej: Municipal, Escrituración" class="w-full p-2 border border-[#D8D3C8] rounded-xl text-xs bg-white">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold mb-1">Asunto</label>
@@ -122,7 +137,6 @@
     </div>
 </div>
 
-<!-- JAVASCRIPT DE INTERACTIVIDAD -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const selectTipo = document.getElementById('nuevo_tipo');
@@ -139,17 +153,14 @@ document.addEventListener('DOMContentLoaded', function () {
         const nombrePrevio = obtenerNombreActual();
         const tipoSeleccionado = selectTipo.value;
 
-        // Mostrar / Ocultar contenedores
         seccionContacto.style.display = (tipoSeleccionado === 'contacto') ? 'grid' : 'none';
         seccionAsesoria.style.display = (tipoSeleccionado === 'asesoria') ? 'grid' : 'none';
         seccionTramite.style.display = (tipoSeleccionado === 'tramite') ? 'grid' : 'none';
 
-        // Habilitar/Deshabilitar inputs para evitar enviar datos irrelevantes en el request
         toggleInputs(seccionContacto, tipoSeleccionado === 'contacto');
         toggleInputs(seccionAsesoria, tipoSeleccionado === 'asesoria');
         toggleInputs(seccionTramite, tipoSeleccionado === 'tramite');
 
-        // Transferir el nombre al input activo de la nueva sección
         if (nombrePrevio.trim() !== '') {
             const nuevoInputNombre = document.querySelector('input[name="name"]:not([disabled]), input[name="full_name"]:not([disabled]), input[name="first_name"]:not([disabled])');
             if (nuevoInputNombre) {
@@ -166,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     selectTipo.addEventListener('change', alternarFormularios);
-    alternarFormularios(); // Ejecución inicial
+    alternarFormularios();
 });
 </script>
 @endsection

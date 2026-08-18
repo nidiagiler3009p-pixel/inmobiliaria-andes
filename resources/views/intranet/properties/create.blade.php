@@ -34,18 +34,18 @@
                 </select>
             </div>
 
-            <div>
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Inmueble</label>
-                <select name="property_type" required class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
-                    <option value="Casa" {{ old('property_type') == 'Casa' ? 'selected' : '' }}>Casa</option>
-                    <option value="Terrenos" {{ old('property_type') == 'Terrenos' ? 'selected' : '' }}>Terrenos</option>
-                    <option value="Comerciales" {{ old('property_type') == 'Comerciales' ? 'selected' : '' }}>Comerciales</option>
-                    <option value="Oficinas" {{ old('property_type') == 'Oficinas' ? 'selected' : '' }}>Proyectos / Oficinas</option>
-                    <option value="Locales" {{ old('property_type') == 'Locales' ? 'selected' : '' }}>Locales</option>
-                    <option value="Terrenos Grandes" {{ old('property_type') == 'Terrenos Grandes' ? 'selected' : '' }}>Terrenos Grandes</option>
-                    <option value="Departamentos" {{ old('property_type') == 'Departamentos' ? 'selected' : '' }}>Departamentos</option>
-                </select>
-            </div>
+           <div>
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Inmueble</label>
+    <select name="property_type" required class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+        <option value="">Seleccione un tipo...</option>
+        <option value="Casa" {{ old('property_type') == 'Casa' ? 'selected' : '' }}>Casa</option>
+        <option value="Terrenos" {{ old('property_type') == 'Terrenos' ? 'selected' : '' }}>Terrenos</option>
+        <option value="Terrenos Grandes" {{ old('property_type') == 'Terrenos Grandes' ? 'selected' : '' }}>Terrenos Grandes</option>
+        <option value="Proyectos" {{ old('property_type') == 'Proyectos' ? 'selected' : '' }}>Proyectos</option>
+        <option value="Departamentos" {{ old('property_type') == 'Departamentos' ? 'selected' : '' }}>Departamentos</option>
+        <option value="Comerciales" {{ old('property_type') == 'Comerciales' ? 'selected' : '' }}>Comerciales</option>
+    </select>
+</div>
 
             <div>
                 <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Operación</label>
@@ -280,10 +280,32 @@
                 <textarea name="description" rows="3" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">{{ old('description') }}</textarea>
             </div>
 
-            <!-- Fotografías para la Galería -->
+            <!-- GALERÍA DE FOTOGRAFÍAS PARA NUEVA PROPIEDAD -->
             <div class="md:col-span-2 pt-4 border-t border-emerald-100">
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Fotografías de la Propiedad (Galería Múltiple)</label>
-                <input type="file" name="images[]" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2C4A3E] file:text-white hover:file:bg-emerald-800 cursor-pointer">
+                <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase mb-1">
+                    <i class="fa-solid fa-images mr-2"></i> Galería de Fotografías
+                </h3>
+                <p class="text-[10px] text-gray-400 mb-3">Selecciona una o varias fotografías. La primera imagen de la lista se usará como portada principal.</p>
+
+                <!-- Campo para Subir Fotografías -->
+                <div class="mt-2">
+                    <label class="block mb-2 uppercase text-[10px] font-extrabold text-[#2C4A3E]">
+                        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Agregar Fotografías
+                    </label>
+                    
+                    <input type="file" 
+                           id="images-input" 
+                           name="images[]" 
+                           multiple 
+                           accept="image/*"
+                           onchange="previewNewImages(event)" 
+                           class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2C4A3E] file:text-white hover:file:bg-emerald-800 cursor-pointer border border-emerald-200 rounded-xl bg-[#FDFBF7] p-1 shadow-sm">
+                    
+                    <p class="text-[10px] text-gray-400 mt-1">Puedes seleccionar varios archivos simultáneamente. La primera foto será la portada principal.</p>
+
+                    <!-- Contenedor donde se previsualizan las imágenes antes de guardar -->
+                    <div id="new-images-preview" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-3"></div>
+                </div>
             </div>
 
             <!-- 6. Redes Sociales y Difusión -->
@@ -312,8 +334,8 @@
             </div>
 
             <div>
-                <label class="block mb-2 uppercase text-[10px] text-gray-500"><i class="fa-solid fa-phone text-emerald-700 mr-1"></i> Teléfono WhatsApp (Difusión)</label>
-                <input type="text" name="whatsapp_phone" value="{{ old('whatsapp_phone') }}" placeholder="Ej: 0988059187" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label class="block mb-2 uppercase text-[10px] text-gray-500"><i class="fa-solid fa-phone text-emerald-700 mr-1"></i> Teléfono de Contacto</label>
+                <input type="text" name="contact_phone" value="{{ old('contact_phone') }}" placeholder="Ej: 0987894025" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div>
@@ -329,4 +351,90 @@
         </div>
     </form>
 </div>
+
+<script>
+// Objeto global para acumular múltiples selecciones de imágenes nuevas
+const selectedFilesDataTransfer = new DataTransfer();
+
+// Previsualización acumulativa de imágenes nuevas
+function previewNewImages(event) {
+    const input = event.target;
+    if (!input.files || input.files.length === 0) return;
+
+    // Agregar archivos seleccionados al acumulador
+    Array.from(input.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+            selectedFilesDataTransfer.items.add(file);
+        }
+    });
+
+    // Sincronizar el input HTML
+    input.files = selectedFilesDataTransfer.files;
+
+    renderPendingPreviews();
+}
+
+// Renderizar tarjetas de previsualización para archivos pendientes
+function renderPendingPreviews() {
+    const previewContainer = document.getElementById('new-images-preview');
+    if (!previewContainer) return;
+
+    previewContainer.innerHTML = '';
+
+    Array.from(selectedFilesDataTransfer.files).forEach((file, index) => {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            const card = document.createElement('div');
+            card.className = 'relative group bg-[#FDFBF7] border-2 border-dashed border-emerald-500 rounded-2xl overflow-hidden shadow-sm aspect-video flex items-center justify-center';
+
+            card.innerHTML = `
+                <img src="${e.target.result}" class="w-full h-32 object-cover">
+                
+                ${index === 0 ? `
+                <span class="absolute top-2 left-2 z-10 bg-[#2C4A3E] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-star text-amber-300"></i> Portada
+                </span>
+                ` : `
+                <span class="absolute top-2 left-2 z-10 bg-emerald-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-image"></i> Foto ${index + 1}
+                </span>
+                `}
+
+                <button type="button" 
+                        onclick="removePendingImage(${index})" 
+                        title="Quitar de la selección" 
+                        class="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold transition shadow-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+
+            previewContainer.appendChild(card);
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+// Eliminar una imagen individual de la selección pendiente antes de guardar
+function removePendingImage(index) {
+    const input = document.getElementById('images-input');
+    const newDT = new DataTransfer();
+
+    Array.from(selectedFilesDataTransfer.files).forEach((file, i) => {
+        if (i !== index) {
+            newDT.items.add(file);
+        }
+    });
+
+    selectedFilesDataTransfer.items.clear();
+    Array.from(newDT.files).forEach(file => selectedFilesDataTransfer.items.add(file));
+
+    if (input) {
+        input.files = selectedFilesDataTransfer.files;
+    }
+
+    renderPendingPreviews();
+}
+</script>
 @endsection

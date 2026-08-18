@@ -1,21 +1,36 @@
 @extends('layouts.admin')
 
 @section('admin_content')
+<style>
+    /* Oculta la barra de scroll y habilita el desplazamiento suave para carruseles */
+    .carrusel-scroll {
+        display: flex !important;
+        overflow-x: auto !important;
+        scroll-behavior: smooth !important;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE y Edge */
+    }
+    .carrusel-scroll::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+</style>
+
 <div class="w-full px-4 sm:px-6 lg:px-8 pt-1 pb-16 space-y-3 font-sans" 
      x-data="{ 
-         sidebarOpen: true, 
-         precioMin: '{{ request('min_price', 0) }}', 
-         precioMax: '{{ request('max_price', 300000) }}',
-         formatMoney(value) {
-             if (!value) return '0';
-             return Number(value).toLocaleString('en-US');  
-         }
+        sidebarOpen: true, 
+        precioMin: '{{ request('min_price', 0) }}', 
+        precioMax: '{{ request('max_price', 300000) }}',
+        formatMoney(value) {
+            if (!value) return '0';
+            return Number(value).toLocaleString('en-US');  
+        }
      }">
     
     <!-- BARRA SUPERIOR UNIFICADA Y COMPACTA -->
     <div class="flex flex-wrap justify-between items-center bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-emerald-100 shadow-sm gap-2">
         <div class="flex flex-wrap items-center gap-2">
-            <!-- Botón de menú / flecha -->
+            <!-- Botón toggle de filtros -->
             <button @click="sidebarOpen = !sidebarOpen" class="p-2 bg-[#2C4A3E] text-white text-xs rounded-xl shadow-sm hover:bg-emerald-800 transition flex items-center justify-center w-8 h-8 shrink-0 cursor-pointer" :title="sidebarOpen ? 'Ocultar filtros' : 'Mostrar filtros'">
                 <i class="fa-solid" :class="sidebarOpen ? 'fa-chevron-left' : 'fa-bars'"></i>
             </button>
@@ -25,7 +40,7 @@
                 <i class="fa-solid fa-plus-circle text-xs"></i> Agregar Propiedad
             </a>
 
-            <!-- Selector: Tus Propiedades -->
+            <!-- Selector: Tus Propiedades / Catálogo Global -->
             <form method="GET" action="{{ route('properties.index') }}" class="flex items-center shrink-0">
                 @foreach(request()->except(['agent_id', 'page']) as $key => $value)
                     @if(is_array($value))
@@ -51,7 +66,7 @@
             </form>
         </div>
 
-        <!-- Buscador -->
+        <!-- Buscador general -->
         <form method="GET" action="{{ route('properties.index') }}" class="flex-1 max-w-md flex gap-2">
             @foreach(request()->except(['search', 'page']) as $key => $value)
                 @if(is_array($value))
@@ -67,7 +82,7 @@
         </form>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL A ANCHO COMPLETO -->
+    <!-- CONTENEDOR PRINCIPAL CON BARRA LATERAL Y CATÁLOGO -->
     <div class="flex gap-4 items-start w-full">
         
         <!-- BARRA LATERAL DE FILTROS -->
@@ -92,7 +107,7 @@
                 </div>
             </div>
 
-            <!-- FORMULARIO GENERAL DE FILTROS -->
+            <!-- FORMULARIO DE FILTROS -->
             <form method="GET" action="{{ route('properties.index') }}" class="space-y-4 text-xs font-bold">
                 @if(request('agent_id'))
                     <input type="hidden" name="agent_id" value="{{ request('agent_id') }}">
@@ -102,9 +117,6 @@
                 @endif
                 @if(request('property_type'))
                     <input type="hidden" name="property_type" value="{{ request('property_type') }}">
-                @endif
-                @if(request('service_type'))
-                    <input type="hidden" name="service_type" value="{{ request('service_type') }}">
                 @endif
                 
                 <!-- Tipo de Operación -->
@@ -123,9 +135,10 @@
                         @php
                             $propertyTypes = [
                                 ['name' => 'Casa', 'label' => 'Casas', 'icon' => 'fa-house', 'count' => $countCasas ?? 0], 
+                                ['name' => 'Departamentos', 'label' => 'Departamentos', 'icon' => 'fa-building-user', 'count' => $countDepartamentos ?? 0],
                                 ['name' => 'Terrenos', 'label' => 'Terrenos', 'icon' => 'fa-mountain', 'count' => $countTerrenos ?? 0], 
                                 ['name' => 'Comerciales', 'label' => 'Comerciales', 'icon' => 'fa-store', 'count' => $countComerciales ?? 0], 
-                                ['name' => 'Oficinas', 'label' => 'Proyectos', 'icon' => 'fa-building', 'count' => $countProyectos ?? 0]
+                                ['name' => 'Proyectos', 'label' => 'Proyectos', 'icon' => 'fa-building', 'count' => $countProyectos ?? 0]
                             ];
                         @endphp
                         @foreach($propertyTypes as $type)
@@ -137,23 +150,30 @@
                     </div>
                 </div>
 
-                <!-- UBICACIÓN -->
+                <!-- Ubicación -->
                 <div class="space-y-2 pt-2 border-t border-emerald-100">
                     <label class="block uppercase text-[10px] text-gray-400 font-extrabold tracking-wider">
                         <i class="fa-solid fa-location-dot mr-1 text-emerald-700"></i> Ubicación
                     </label>
-                    <select name="location" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-[#2C4A3E] focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
-                        <option value="">Ubicación: Todas</option>
+                    <select name="location" 
+                            onchange="this.form.submit()" 
+                            class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-3 py-2 text-xs font-bold text-[#2C4A3E] focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                        <option value="">Todas las ubicaciones</option>
                         @php
-                            $locationsList = \App\Models\Property::whereNotNull('location')->where('location', '!=', '')->distinct()->pluck('location');
+                            $locationsList = \App\Models\Property::whereNotNull('location')
+                                                ->where('location', '!=', '')
+                                                ->distinct()
+                                                ->pluck('location');
                         @endphp
                         @foreach($locationsList as $loc)
-                            <option value="{{ $loc }}" {{ request('location') == $loc ? 'selected' : '' }}>{{ $loc }}</option>
+                            <option value="{{ $loc }}" {{ request('location') == $loc ? 'selected' : '' }}>
+                                {{ $loc }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
 
-                <!-- RANGO DE PRECIO MEJORADO -->
+                <!-- Rango de Precio -->
                 <div class="space-y-2.5 pt-2 border-t border-emerald-100">
                     <div class="flex justify-between items-center">
                         <label class="block uppercase text-[10px] text-gray-400 font-extrabold tracking-wider">
@@ -173,7 +193,6 @@
                         </div>
                     </div>
 
-                    <!-- Botones de Acceso Rápido de Precios -->
                     <div class="flex gap-1.5 pt-1">
                         <button type="button" @click="precioMin = 0; precioMax = 50000" class="flex-1 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold transition">&lt; 50k</button>
                         <button type="button" @click="precioMin = 50000; precioMax = 150000" class="flex-1 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-bold transition">50k-150k</button>
@@ -207,105 +226,133 @@
                     </div>
                 </div>
 
-                <!-- Botón Aplicar -->
                 <button type="submit" class="w-full py-2.5 bg-[#2C4A3E] text-white rounded-2xl text-xs font-extrabold hover:bg-emerald-800 transition shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-3">
                     <i class="fa-solid fa-filter"></i> Aplicar filtros
                 </button>
             </form>
         </div>
 
-        <!-- ZONA CENTRAL DE CATÁLOGO -->
-        <div class="flex-1 space-y-6 transition-all duration-300 w-full">
+        <!-- ÁREA CENTRAL DE RESULTADOS -->
+        <div class="flex-1 space-y-6 transition-all duration-300 w-full min-w-0">
             @if(count(request()->except('page')) > 0)
-                <!-- VISTA FILTRADA -->
-                <div class="bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-emerald-100 shadow-sm space-y-4 w-full">
-                    <div class="flex justify-between items-center">
-                        <h3 class="font-extrabold text-[#2C4A3E] text-sm flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-emerald-700 inline-block"></span> Resultados de Búsqueda / Filtros
+                <!-- RESULTADOS DE FILTROS (GRID VERTICAL COMO EN LA PRIMERA IMAGEN) -->
+                <div class="bg-white/90 backdrop-blur-md p-6 rounded-3xl border border-emerald-100 shadow-sm space-y-6 w-full min-w-0">
+                    <div class="flex flex-wrap items-center justify-between gap-3 px-1 border-b border-emerald-100/60 pb-4">
+                        <h3 class="font-extrabold text-[#2C4A3E] text-base flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-700 inline-block"></span> Resultados de Búsqueda / Filtros
                         </h3>
-                        <a href="{{ route('properties.index') }}" class="px-3 py-1 bg-emerald-100 text-[#2C4A3E] text-xs font-bold rounded-xl hover:bg-emerald-200 transition">
+
+                        <a href="{{ route('properties.index') }}" class="px-4 py-1.5 bg-emerald-100 text-[#2C4A3E] text-xs font-bold rounded-xl hover:bg-emerald-200 transition shadow-2xs">
                             Volver al Catálogo Principal
                         </a>
                     </div>
 
+                    <!-- Grilla Grid Responsiva -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
                         @forelse($properties as $prop)
-                            <a href="{{ route('properties.show', $prop->id) }}" class="rounded-2xl border border-emerald-100 overflow-hidden block hover:shadow-lg transition relative group flex flex-col h-72">
-                                <div class="absolute inset-0 bg-emerald-50/60 flex items-center justify-center overflow-hidden">
-                                    @php
-                                        $validImage = $prop->images->first(function($img) {
-                                            return !empty(trim($img->image_path)) && Storage::disk('public')->exists($img->image_path);
-                                        });
-                                    @endphp
+                            <a href="{{ route('properties.show', $prop->id) }}" class="w-full aspect-square rounded-2xl border border-emerald-100 overflow-hidden block hover:shadow-xl transition duration-300 relative group bg-emerald-50/60">
+                                @php
+                                    $validImage = $prop->images->first(function($img) {
+                                        return !empty(trim($img->image_path)) && Storage::disk('public')->exists($img->image_path);
+                                    });
+                                @endphp
+                                
+                                <div class="w-full h-full flex items-center justify-center overflow-hidden">
                                     @if($validImage)
                                         <img src="{{ asset('storage/' . $validImage->image_path) }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                     @else
                                         <div class="flex flex-col items-center justify-center text-emerald-800/60 space-y-1">
-                                            <i class="fa-solid fa-image text-lg"></i>
-                                            <span class="text-[8px] font-extrabold uppercase tracking-wider">Sin imagen</span>
+                                            <i class="fa-solid fa-image text-xl"></i>
+                                            <span class="text-[9px] font-extrabold uppercase tracking-wider">Sin imagen</span>
                                         </div>
                                     @endif
                                 </div>
 
-                                <div class="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/50 via-transparent to-transparent pointer-events-none"></div>
-                                <div class="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none"></div>
+                                <div class="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 via-transparent to-transparent pointer-events-none"></div>
+                                <div class="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none"></div>
 
                                 <div class="absolute top-3 left-3 z-10">
-                                    <span class="px-3.5 py-1.5 bg-[#5A8275]/95 backdrop-blur-md text-white text-[11px] font-black rounded-xl uppercase tracking-widest shadow-md">
+                                    <span class="px-3 py-1 bg-[#2C4A3E]/90 backdrop-blur-md text-white text-[10px] font-black rounded-lg uppercase tracking-widest shadow-md border border-white/20">
                                         {{ $prop->service_type }}
                                     </span>
                                 </div>
 
                                 <div class="absolute bottom-0 inset-x-0 p-3.5 flex justify-between items-end z-10">
-                                    <span class="text-xs font-bold text-white flex items-center gap-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate max-w-[50%]">
+                                    <span class="text-xs font-bold text-white flex items-center gap-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] truncate max-w-[55%]">
                                         <i class="fa-solid fa-location-dot text-emerald-400 text-sm"></i> {{ $prop->location }}
                                     </span>
                                     <span class="text-sm font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] tracking-tight">
-                                        $ {{ number_format($prop->price, 2) }}
+                                        $ {{ number_format($prop->price, 0) }}
                                     </span>
                                 </div>
                             </a>
                         @empty
-                            <p class="text-xs text-gray-500 col-span-full text-center py-8">No se encontraron propiedades disponibles con estos filtros.</p>
+                            <div class="col-span-full py-12 text-center text-gray-500 font-medium">
+                                No se encontraron propiedades disponibles con los filtros seleccionados.
+                            </div>
                         @endforelse
                     </div>
 
-                    <div class="mt-4">
-                        {{ $properties->links() }}
-                    </div>
+                    @if($properties->hasPages())
+                        <div class="pt-4 border-t border-emerald-100">
+                            {{ $properties->links() }}
+                        </div>
+                    @endif
                 </div>
             @else
-                <!-- VISTA PRINCIPAL ESTILO NETFLIX -->
-                <div class="space-y-6 pr-2 w-full">
+                <!-- VISTA PRINCIPAL SIN FILTROS (CARRUSELES HORIZONTALES) -->
+                <div class="space-y-6 pr-2 w-full min-w-0">
                     @php
                         $sections = [
                             ['title' => 'Bajaron de Precio', 'items' => $bajaronPrecio, 'filter_key' => 'price_dropped', 'filter_val' => '1'],
+                            ['title' => 'Departamentos', 'items' => $departamentos, 'filter_key' => 'property_type', 'filter_val' => 'Departamentos'],
                             ['title' => 'Terrenos', 'items' => $terrenos, 'filter_key' => 'property_type', 'filter_val' => 'Terrenos'],
                             ['title' => 'Casas', 'items' => $casas, 'filter_key' => 'property_type', 'filter_val' => 'Casa'],
                             ['title' => 'Comerciales', 'items' => $comerciales, 'filter_key' => 'property_type', 'filter_val' => 'Comerciales'],
-                            ['title' => 'Proyectos / Lotizaciones', 'items' => $proyectos, 'filter_key' => 'property_type', 'filter_val' => 'Oficinas']
+                            ['title' => 'Proyectos / Lotizaciones', 'items' => $proyectos, 'filter_key' => 'property_type', 'filter_val' => 'Proyectos']
                         ];
                     @endphp
 
-                    @foreach($sections as $section)
-                        <div class="bg-white/90 backdrop-blur-md p-4 rounded-3xl border border-emerald-100 shadow-sm space-y-3 w-full">
-                            <div class="flex justify-between items-center px-1">
+                    @foreach($sections as $index => $section)
+                        <div class="bg-white/90 backdrop-blur-md p-4 rounded-3xl border border-emerald-100 shadow-sm space-y-3 w-full min-w-0">
+                            <div class="flex items-center gap-3 px-1">
                                 <h3 class="font-extrabold text-[#2C4A3E] text-sm flex items-center gap-2">
                                     <span class="w-2 h-2 rounded-full bg-emerald-700 inline-block"></span> {{ $section['title'] }}
                                 </h3>
-                                <a href="{{ route('properties.index', [$section['filter_key'] => $section['filter_val']]) }}" class="text-xs font-extrabold text-emerald-700 hover:underline">Ver todas &gt;</a>
+
+                                @if(isset($section['items']) && $section['items']->count() > 1)
+                                    <div class="flex items-center gap-1.5">
+                                        <button onclick="moverCarrusel('sec-carousel-{{ $index }}', -1)" 
+                                                type="button" 
+                                                class="bg-[#2C4A3E] hover:bg-emerald-700 text-white w-8 h-8 rounded-full flex items-center justify-center border border-emerald-500/40 shadow-sm transition cursor-pointer active:scale-95" 
+                                                aria-label="Anterior" 
+                                                title="Anterior">
+                                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                                        </button>
+
+                                        <button onclick="moverCarrusel('sec-carousel-{{ $index }}', 1)" 
+                                                type="button" 
+                                                class="bg-[#2C4A3E] hover:bg-emerald-700 text-white w-8 h-8 rounded-full flex items-center justify-center border border-emerald-500/40 shadow-sm transition cursor-pointer active:scale-95" 
+                                                aria-label="Siguiente" 
+                                                title="Siguiente">
+                                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                                        </button>
+                                    </div>
+                                @endif
+
+                                <a href="{{ route('properties.index', [$section['filter_key'] => $section['filter_val']]) }}" class="text-xs font-extrabold text-emerald-700 hover:underline ml-auto">Ver todas &gt;</a>
                             </div>
 
-                            <!-- Carrusel Horizontal -->
-                            <div class="flex gap-4 overflow-x-auto pb-2 scroll-smooth no-scrollbar">
+                            <div id="sec-carousel-{{ $index }}" class="carrusel-scroll gap-4 pb-2 w-full"> 
                                 @forelse($section['items'] as $prop)
-                                    <a href="{{ route('properties.show', $prop->id) }}" class="w-72 shrink-0 rounded-2xl border border-emerald-100 overflow-hidden block hover:shadow-lg transition relative group flex flex-col h-72">
-                                        <div class="absolute inset-0 bg-emerald-50/60 flex items-center justify-center overflow-hidden">
-                                            @php
-                                                $validImage = $prop->images->first(function($img) {
-                                                    return !empty(trim($img->image_path)) && Storage::disk('public')->exists($img->image_path);
-                                                });
-                                            @endphp
+                                    <a href="{{ route('properties.show', $prop->id) }}" class="w-72 h-72 shrink-0 rounded-2xl border border-emerald-100 overflow-hidden block hover:shadow-lg transition relative group">
+                                        @php
+                                            $validImage = $prop->images->first(function($img) {
+                                                return !empty(trim($img->image_path)) && Storage::disk('public')->exists($img->image_path);
+                                            });
+                                        @endphp
+
+                                        <div class="w-full h-full bg-emerald-50/60 flex items-center justify-center overflow-hidden">
                                             @if($validImage)
                                                 <img src="{{ asset('storage/' . $validImage->image_path) }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
                                             @else
@@ -330,7 +377,7 @@
                                                 <i class="fa-solid fa-location-dot text-emerald-400 text-sm"></i> {{ $prop->location }}
                                             </span>
                                             <span class="text-sm font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] tracking-tight">
-                                                $ {{ number_format($prop->price, 2) }}
+                                                $ {{ number_format($prop->price, 0) }}
                                             </span>
                                         </div>
                                     </a>
@@ -345,4 +392,23 @@
         </div>
     </div>
 </div>
+
+<script>
+function moverCarrusel(id, direccion) {
+    const contenedor = document.getElementById(id);
+    if (!contenedor) return;
+
+    if (direccion === 1) {
+        contenedor.scrollTo({
+            left: contenedor.scrollWidth,
+            behavior: 'smooth'
+        });
+    } else {
+        contenedor.scrollTo({
+            left: 0,
+            behavior: 'smooth'
+        });
+    }
+}
+</script>
 @endsection

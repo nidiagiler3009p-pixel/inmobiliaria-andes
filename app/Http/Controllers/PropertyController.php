@@ -15,158 +15,137 @@ class PropertyController extends Controller
     {
         $query = Property::with(['user', 'images']);
 
-        // 1. Filtro por Barra de Búsqueda
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'LIKE', "%{$search}%")
-                  ->orWhere('location', 'LIKE', "%{$search}%")
-                  ->orWhere('address', 'LIKE', "%{$search}%");
-            });
-        }
+        // Helper para aplicar exactamente los mismos filtros a $query y a $baseCountQuery
+        $applyFilters = function ($q) use ($request) {
+            // 1. Barra de Búsqueda General (Título, Ubicación o Dirección)
+            if ($request->filled('search')) {
+                $search = trim($request->search);
+                $q->where(function($sub) use ($search) {
+                    $sub->where('title', 'LIKE', "%{$search}%")
+                        ->orWhere('location', 'LIKE', "%{$search}%")
+                        ->orWhere('address', 'LIKE', "%{$search}%");
+                });
+            }
 
-        // 2. Filtro por Asesor Asignado
-        if ($request->filled('agent_id') && $request->agent_id !== 'all') {
-            $query->where('user_id', $request->agent_id);
-        }
+            // 2. Asesor
+            if ($request->filled('agent_id') && $request->agent_id !== 'all') {
+                $q->where('user_id', $request->agent_id);
+            }
 
-        // 3. Filtro por Tipo de Operación
-        if ($request->filled('service_type')) {
-            $query->where('service_type', $request->service_type);
-        }
+            // 3. Tipo de Operación (Venta, Arriendo, etc.)
+            if ($request->filled('service_type') && $request->service_type !== 'all' && $request->service_type !== '') {
+                $q->where('service_type', $request->service_type);
+            }
 
-        // 4. Filtro por Tipo de Inmueble
-        if ($request->filled('property_type')) {
-            $tipo = trim($request->property_type);
-            $query->where('property_type', 'LIKE', "%{$tipo}%");
-        }
-
-        // 5. Filtros de Ubicación adaptados al campo 'location'
-        if ($request->filled('province')) {
-            $query->where('location', 'LIKE', "%{$request->province}%");
-        }
-        if ($request->filled('city')) {
-            $query->where('location', 'LIKE', "%{$request->city}%");
-        }
-        if ($request->filled('sector')) {
-            $query->where('location', 'LIKE', "%{$request->sector}%");
-        }
-
-        // 6. Filtro por Rango de Precios
-        if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
-        }
-
-        // 7. Filtro por Características utilizando las columnas booleanas directas
-        if ($request->filled('features') && is_array($request->features)) {
-            foreach ($request->features as $feature) {
-                if ($feature === 'parqueadero') {
-                    $query->where('garages', '>', 0);
-                } elseif ($feature === 'jardin') {
-                    $query->where('has_jardin', true);
-                } elseif ($feature === 'balcon') {
-                    $query->where('has_balcon', true);
-                } elseif ($feature === 'seguridad') {
-                    $query->where('has_seguridad', true);
-                } elseif ($feature === 'agua') {
-                    $query->where('has_agua', true);
-                } elseif ($feature === 'luz') {
-                    $query->where('has_luz', true);
-                } elseif ($feature === 'alcantarillado') {
-                    $query->where('has_alcantarillado', true);
-                } elseif ($feature === 'internet') {
-                    $query->where('has_internet', true);
-                } elseif ($feature === 'piscina') {
-                    $query->where('has_piscina', true);
-                } elseif ($feature === 'bbq') {
-                    $query->where('has_bbq', true);
-                } elseif ($feature === 'amoblado') {
-                    $query->where('has_amoblado', true);
-                } elseif ($feature === 'mascotas') {
-                    $query->where('has_mascotas', true);
+            // 4. Tipo de Inmueble (Casa, Departamentos, Comerciales, etc.)
+            if ($request->filled('property_type') && $request->property_type !== 'all' && $request->property_type !== '') {
+                $tipo = trim($request->property_type);
+                if ($tipo === 'Terrenos') {
+                    $q->where(function($sub) {
+                        $sub->where('property_type', 'Terrenos')
+                            ->orWhere('property_type', 'Terrenos Grandes');
+                    });
+                } else {
+                    $q->where('property_type', 'LIKE', "%{$tipo}%");
                 }
             }
-        }
 
-        // Resultados paginados para la vista de búsqueda/filtros
+
+//Ubicacion: Se busca en location, city, province o sector
+$ubicacion = $request->input('location') 
+          ?? $request->input('city') 
+          ?? $request->input('province') 
+          ?? $request->input('sector');
+
+if (!empty($ubicacion) && trim($ubicacion) !== '') {
+    $term = trim($ubicacion);
+    $q->where('location', 'LIKE', "%{$term}%");
+}
+
+// 6. Rangos de Precio (Ignorar max_price si es el valor por defecto de 300,000)
+if ($request->filled('min_price') && (float)$request->min_price > 0) {
+    $q->where('price', '>=', (float) $request->min_price);
+}
+
+if ($request->filled('max_price') && (float)$request->max_price > 0) {
+    $max = (float) $request->max_price;
+    // Si el frontend envía 300000 por defecto pero no se movió el slider, no limitar
+    if ($max != 300000) { 
+        $q->where('price', '<=', $max);
+    }
+}
+            // 7. Características
+            if ($request->filled('features') && is_array($request->features)) {
+                foreach ($request->features as $feature) {
+                    match ($feature) {
+                        'parqueadero'    => $q->where('garages', '>', 0),
+                        'jardin'         => $q->where('has_jardin', true),
+                        'balcon'         => $q->where('has_balcon', true),
+                        'seguridad'      => $q->where('has_seguridad', true),
+                        'agua'           => $q->where('has_agua', true),
+                        'luz'            => $q->where('has_luz', true),
+                        'alcantarillado' => $q->where('has_alcantarillado', true),
+                        'internet'       => $q->where('has_internet', true),
+                        'piscina'        => $q->where('has_piscina', true),
+                        'bbq'            => $q->where('has_bbq', true),
+                        'amoblado'       => $q->where('has_amoblado', true),
+                        'mascotas'       => $q->where('has_mascotas', true),
+                        default          => null,
+                    };
+                }
+            }
+        };
+
+        // Aplicar los filtros a la consulta principal
+        $applyFilters($query);
+
+        // Resultados paginados
         $properties = $query->latest()->paginate(12)->withQueryString();
         $agents = User::all();
 
         // ==========================================
         // CONTEOS REALES Y DINÁMICOS PARA LA BARRA LATERAL
         // ==========================================
-        
         $baseCountQuery = Property::query();
+        $applyFilters($baseCountQuery);
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $baseCountQuery->where(function($q) use ($search) {
-                $q->where('title', 'LIKE', "%{$search}%")
-                  ->orWhere('location', 'LIKE', "%{$search}%")
-                  ->orWhere('address', 'LIKE', "%{$search}%");
-            });
-        }
-        if ($request->filled('agent_id') && $request->agent_id !== 'all') {
-            $baseCountQuery->where('user_id', $request->agent_id);
-        }
-        if ($request->filled('service_type')) {
-            $baseCountQuery->where('service_type', $request->service_type);
-        }
-        if ($request->filled('property_type')) {
-            $baseCountQuery->where('property_type', 'LIKE', '%' . trim($request->property_type) . '%');
-        }
-        if ($request->filled('province')) {
-            $baseCountQuery->where('location', 'LIKE', "%{$request->province}%");
-        }
-        if ($request->filled('city')) {
-            $baseCountQuery->where('location', 'LIKE', "%{$request->city}%");
-        }
-        if ($request->filled('sector')) {
-            $baseCountQuery->where('location', 'LIKE', "%{$request->sector}%");
-        }
-        if ($request->filled('min_price')) {
-            $baseCountQuery->where('price', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $baseCountQuery->where('price', '<=', $request->max_price);
-        }
-
-        // Tipos de Inmueble dinámicos basados en tu enum
+        // Conteos por tipo de inmueble
         $countCasas         = (clone $baseCountQuery)->where('property_type', 'Casa')->count();
-        $countTerrenos      = (clone $baseCountQuery)->where('property_type', 'Terrenos')->count();
+        $countDepartamentos = (clone $baseCountQuery)->where('property_type', 'Departamentos')->count();
+        $countTerrenos      = (clone $baseCountQuery)->whereIn('property_type', ['Terrenos', 'Terrenos Grandes'])->count();
         $countComerciales   = (clone $baseCountQuery)->where('property_type', 'Comerciales')->count();
-        $countProyectos     = (clone $baseCountQuery)->where('property_type', 'Oficinas')->count();
+        $countProyectos     = (clone $baseCountQuery)->where('property_type', 'Proyectos')->count();
 
-        // Conteos dinámicos utilizando directamente las columnas booleanas
-        $countParq      = (clone $baseCountQuery)->where('garages', '>', 0)->count();
-        $countJardin    = (clone $baseCountQuery)->where('has_jardin', true)->count();
-        $countBalcon    = (clone $baseCountQuery)->where('has_balcon', true)->count();
-        $countSeguridad = (clone $baseCountQuery)->where('has_seguridad', true)->count();
-        $countAgua      = (clone $baseCountQuery)->where('has_agua', true)->count();
-        $countLuz       = (clone $baseCountQuery)->where('has_luz', true)->count();
+        // Conteos por características
+        $countParq           = (clone $baseCountQuery)->where('garages', '>', 0)->count();
+        $countJardin         = (clone $baseCountQuery)->where('has_jardin', true)->count();
+        $countBalcon         = (clone $baseCountQuery)->where('has_balcon', true)->count();
+        $countSeguridad      = (clone $baseCountQuery)->where('has_seguridad', true)->count();
+        $countAgua           = (clone $baseCountQuery)->where('has_agua', true)->count();
+        $countLuz            = (clone $baseCountQuery)->where('has_luz', true)->count();
         $countAlcantarillado = (clone $baseCountQuery)->where('has_alcantarillado', true)->count();
 
         // ==========================================
-        // COLECCIONES PARA LOS CARRUSELES TIPO NETFLIX
+        // COLECCIONES PARA CARRUSELES POR CATEGORÍA
         // ==========================================
-        $bajaronPrecio = Property::with('images')->where('price_dropped', 1)->take(6)->get();
-        $terrenos      = Property::with('images')->where('property_type', 'Terrenos')->take(6)->get();
-        $casas         = Property::with('images')->where('property_type', 'Casa')->take(6)->get();
-        $comerciales   = Property::with('images')->where('property_type', 'Comerciales')->take(6)->get();
-        $proyectos     = Property::with('images')->where('property_type', 'Oficinas')->take(6)->get();
-       
+        $bajaronPrecio = Property::with('images')->where('price_dropped', 1)->latest()->take(6)->get();
+        $terrenos      = Property::with('images')->whereIn('property_type', ['Terrenos', 'Terrenos Grandes'])->latest()->take(6)->get();
+        $casas         = Property::with('images')->where('property_type', 'Casa')->latest()->take(6)->get();
+        $departamentos = Property::with('images')->where('property_type', 'Departamentos')->latest()->take(6)->get();
+        $comerciales   = Property::with('images')->where('property_type', 'Comerciales')->latest()->take(6)->get();
+        $proyectos     = Property::with('images')->where('property_type', 'Proyectos')->latest()->take(6)->get();
+
         return view('intranet.properties.index', compact(
             'properties', 
             'agents', 
             'bajaronPrecio', 
+            'casas',
+            'departamentos',
             'terrenos', 
-            'casas', 
             'comerciales', 
             'proyectos',
             'countCasas',
+            'countDepartamentos',
             'countTerrenos',
             'countComerciales',
             'countProyectos',
@@ -204,31 +183,30 @@ class PropertyController extends Controller
             $data['status'] = 'En Venta';
         }
 
-        // Asegurar que todos los checkboxes y características se guarden como 0 o 1
-        $data['price_dropped'] = (int) $request->input('price_dropped', 0);
-        $data['has_jardin']         = $request->has('has_jardin') ? 1 : 0;
-        $data['has_balcon']         = $request->has('has_balcon') ? 1 : 0;
-        $data['has_seguridad']      = $request->has('has_seguridad') ? 1 : 0;
-        $data['has_agua']           = $request->has('has_agua') ? 1 : 0;
-        $data['has_luz']            = $request->has('has_luz') ? 1 : 0;
-        $data['has_alcantarillado'] = $request->has('has_alcantarillado') ? 1 : 0;
-        $data['has_internet']       = $request->has('has_internet') ? 1 : 0;
-        $data['has_piscina']        = $request->has('has_piscina') ? 1 : 0;
-        $data['has_bbq']            = $request->has('has_bbq') ? 1 : 0;
-        $data['has_amoblado']       = $request->has('has_amoblado') ? 1 : 0;
-        $data['has_mascotas']       = $request->has('has_mascotas') ? 1 : 0;
+        // Checkboxes y características a valores booleanos (0 o 1)
+        $data['price_dropped']       = (int) $request->input('price_dropped', 0);
+        $data['has_jardin']        = $request->has('has_jardin') ? 1 : 0;
+        $data['has_balcon']        = $request->has('has_balcon') ? 1 : 0;
+        $data['has_seguridad']     = $request->has('has_seguridad') ? 1 : 0;
+        $data['has_agua']          = $request->has('has_agua') ? 1 : 0;
+        $data['has_luz']           = $request->has('has_luz') ? 1 : 0;
+        $data['has_alcantarillado']= $request->has('has_alcantarillado') ? 1 : 0;
+        $data['has_internet']      = $request->has('has_internet') ? 1 : 0;
+        $data['has_piscina']       = $request->has('has_piscina') ? 1 : 0;
+        $data['has_bbq']           = $request->has('has_bbq') ? 1 : 0;
+        $data['has_amoblado']      = $request->has('has_amoblado') ? 1 : 0;
+        $data['has_mascotas']      = $request->has('has_mascotas') ? 1 : 0;
 
         if (isset($data['basic_services']) && is_array($data['basic_services'])) {
             $data['basic_services'] = json_encode($data['basic_services']);
         }
 
-        // Al crear, comprobamos si de una vez se llenaron los campos de asesor
         $data['social_info_completed'] = (
             !empty($data['url_youtube']) &&
             !empty($data['url_instagram']) &&
             !empty($data['url_tiktok']) &&
             !empty($data['url_facebook']) &&
-            !empty($data['whatsapp_phone']) &&
+            !empty($data['contact_phone']) &&
             !empty($data['contact_email'])
         ) ? 1 : 0;
 
@@ -250,10 +228,14 @@ class PropertyController extends Controller
 
     // Mostrar detalles
     public function show(Property $property)
-
     {
-        
-        $property->load('images', 'user');
+        $property->load([
+            'images' => function ($query) {
+                $query->orderBy('position', 'asc');
+            },
+            'user'
+        ]);
+
         return view('intranet.properties.show', compact('property'));
     }
 
@@ -262,19 +244,20 @@ class PropertyController extends Controller
     {
         $asesores = User::all();
         
-        // Cargar todas las colecciones que la vista utiliza en su diseño
         $bajaronPrecio = Property::with('images')->where('price_dropped', 1)->take(6)->get();
-        $terrenos      = Property::with('images')->where('property_type', 'Terrenos')->take(6)->get();
         $casas         = Property::with('images')->where('property_type', 'Casa')->take(6)->get();
+        $departamentos = Property::with('images')->where('property_type', 'Departamentos')->take(6)->get();
+        $terrenos      = Property::with('images')->whereIn('property_type', ['Terrenos', 'Terrenos Grandes'])->take(6)->get();
         $comerciales   = Property::with('images')->where('property_type', 'Comerciales')->take(6)->get();
-        $proyectos     = Property::with('images')->where('property_type', 'Oficinas')->take(6)->get();
+        $proyectos     = Property::with('images')->where('property_type', 'Proyectos')->take(6)->get();
 
         return view('intranet.properties.edit', compact(
             'property', 
             'asesores', 
             'bajaronPrecio', 
+            'casas',
+            'departamentos',
             'terrenos', 
-            'casas', 
             'comerciales', 
             'proyectos'
         ));
@@ -285,15 +268,13 @@ class PropertyController extends Controller
     {
         $user = auth()->user();
 
-        // Verificamos si el usuario autenticado tiene el rol de asesor
         if ($user && $user->role === 'Asesor') {
-            // El asesor solo valida sus campos correspondientes
             $request->validate([
                 'url_youtube'    => 'nullable|string|max:255',
                 'url_instagram'  => 'nullable|string|max:255',
                 'url_tiktok'     => 'nullable|string|max:255',
                 'url_facebook'   => 'nullable|string|max:255',
-                'whatsapp_phone' => 'nullable|string|max:20',
+                'contact_phone' => 'nullable|string|max:20',
                 'contact_email'  => 'nullable|email|max:255',
             ]);
 
@@ -302,22 +283,20 @@ class PropertyController extends Controller
                 'url_instagram', 
                 'url_tiktok', 
                 'url_facebook', 
-                'whatsapp_phone', 
+                'contact_phone', 
                 'contact_email'
             ]);
 
-            // Comprobamos si TODOS los campos del asesor están llenos para activar el visto
             $advisorFieldsCompleted = !empty($data['url_youtube']) &&
                                       !empty($data['url_instagram']) &&
                                       !empty($data['url_tiktok']) &&
                                       !empty($data['url_facebook']) &&
-                                      !empty($data['whatsapp_phone']) &&
+                                      !empty($data['contact_phone']) &&
                                       !empty($data['contact_email']);
 
             $data['social_info_completed'] = $advisorFieldsCompleted ? 1 : 0;
 
         } else {
-            // El administrador gestiona y valida todo el registro completo
             $request->validate([
                 'title'        => 'required|string|max:255',
                 'price'        => 'required|numeric',
@@ -326,39 +305,35 @@ class PropertyController extends Controller
 
             $data = $request->all();
 
-            // Asegurar que todos los checkboxes y características se actualicen como 0 o 1
-            $data['price_dropped'] = (int) $request->input('price_dropped', 0);
-            $data['has_jardin']         = $request->has('has_jardin') ? 1 : 0;
-            $data['has_balcon']         = $request->has('has_balcon') ? 1 : 0;
-            $data['has_seguridad']      = $request->has('has_seguridad') ? 1 : 0;
-            $data['has_agua']           = $request->has('has_agua') ? 1 : 0;
-            $data['has_luz']            = $request->has('has_luz') ? 1 : 0;
-            $data['has_alcantarillado'] = $request->has('has_alcantarillado') ? 1 : 0;
-            $data['has_internet']       = $request->has('has_internet') ? 1 : 0;
-            $data['has_piscina']        = $request->has('has_piscina') ? 1 : 0;
-            $data['has_bbq']            = $request->has('has_bbq') ? 1 : 0;
-            $data['has_amoblado']       = $request->has('has_amoblado') ? 1 : 0;
-            $data['has_mascotas']       = $request->has('has_mascotas') ? 1 : 0;
+            $data['price_dropped']       = (int) $request->input('price_dropped', 0);
+            $data['has_jardin']        = $request->has('has_jardin') ? 1 : 0;
+            $data['has_balcon']        = $request->has('has_balcon') ? 1 : 0;
+            $data['has_seguridad']     = $request->has('has_seguridad') ? 1 : 0;
+            $data['has_agua']          = $request->has('has_agua') ? 1 : 0;
+            $data['has_luz']           = $request->has('has_luz') ? 1 : 0;
+            $data['has_alcantarillado']= $request->has('has_alcantarillado') ? 1 : 0;
+            $data['has_internet']      = $request->has('has_internet') ? 1 : 0;
+            $data['has_piscina']       = $request->has('has_piscina') ? 1 : 0;
+            $data['has_bbq']           = $request->has('has_bbq') ? 1 : 0;
+            $data['has_amoblado']      = $request->has('has_amoblado') ? 1 : 0;
+            $data['has_mascotas']      = $request->has('has_mascotas') ? 1 : 0;
 
             if (isset($data['basic_services']) && is_array($data['basic_services'])) {
                 $data['basic_services'] = json_encode($data['basic_services']);
             }
 
-            // Calculamos el estatus de completado también si el admin actualiza dichos campos
             $data['social_info_completed'] = (
                 !empty($data['url_youtube']) &&
                 !empty($data['url_instagram']) &&
                 !empty($data['url_tiktok']) &&
                 !empty($data['url_facebook']) &&
-                !empty($data['whatsapp_phone']) &&
+                !empty($data['contact_phone']) &&
                 !empty($data['contact_email'])
             ) ? 1 : 0;
         }
 
-        // Actualizamos la propiedad
         $property->update($data);
 
-        // Gestión de imágenes
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $path = $image->store('properties', 'public');
@@ -385,5 +360,4 @@ class PropertyController extends Controller
 
         return redirect('/intranet/properties')->with('success', 'Propiedad eliminada correctamente.');
     }
-
 }

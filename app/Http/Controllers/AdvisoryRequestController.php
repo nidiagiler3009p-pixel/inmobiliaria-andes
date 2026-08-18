@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdvisoryRequest;
+use App\Models\AppointmentTracking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class AdvisoryRequestController extends Controller
 {
@@ -15,7 +17,7 @@ class AdvisoryRequestController extends Controller
             'plan_type'         => 'required|in:Gratis,Estándar,Total',
             'advisor_id'        => 'nullable|exists:users,id',
             'full_name'         => 'required|string|max:255',
-            'email'             => 'required|email|max:255',
+            'email'             => 'nullable|email|max:255', // Ahora es opcional
             'phone'             => 'required|string|max:50',
             'ciudad'            => 'required|string|max:100',
             'discovery_channel' => 'nullable|string|max:255',
@@ -32,7 +34,7 @@ class AdvisoryRequestController extends Controller
             'plan_type'         => $validated['plan_type'],
             'advisor_id'        => $validated['advisor_id'] ?? null,
             'full_name'         => $validated['full_name'],
-            'email'             => $validated['email'],
+            'email'             => $validated['email'] ?? null,
             'phone'             => $validated['phone'],
             'ciudad'            => $validated['ciudad'],
             'discovery_channel' => $validated['discovery_channel'] ?? null,
@@ -44,39 +46,49 @@ class AdvisoryRequestController extends Controller
             'accepted_terms'    => true,
             'status'            => 'Pendiente',
         ]);
-        // 3. NUEVO: Crear el registro espejo en la tabla centralizadora
-\App\Models\AppointmentTracking::create([
-    'user_id'           => $advisory->advisor_id ?? 1, // Si eligió asesor web, se lo asigna de una vez
-    'type'              => 'asesoria',
-    'source_channel'    => 'Web - Asesorías (Plan ' . $advisory->plan_type . ')',
-    'location_reference'=> $advisory->property_location ?? $advisory->ciudad,
-    'status'            => 'Pendiente',
-    'priority'          => 'normal',
-    'notes'             => 'Detalles de asesoría: ' . ($advisory->property_details ?? 'Sin detalles'),
-]);
 
-        // 3. Enviar el correo de notificación a la inmobiliaria
-        $correosDestino = [
-            'inmobiliarialosandesecuador@gmail.com'
-            // Puedes agregar más correos aquí si lo deseas separados por coma
-        ];
+        // 3. Crear el registro espejo en la tabla centralizadora
+        AppointmentTracking::create([
+            'user_id'            => $advisory->advisor_id ?? 1, // Asignación por defecto o al asesor seleccionado
+            'type'               => 'asesoria',
+            'source_channel'     => 'Web - Asesorías (Plan ' . $advisory->plan_type . ')',
+            'location_reference' => $advisory->property_location ?? $advisory->ciudad,
+            'registration_date'  => now(),
+            'appointment_date'   => now(),
+            'status'             => 'Pendiente',
+            'priority'           => 'normal',
+            'notes'              => 'Cliente: ' . $advisory->full_name . ' | Tel: ' . $advisory->phone . 
+                                    ' | Detalles: ' . ($advisory->property_details ?? 'Sin detalles'),
+        ]);
 
-        Mail::raw("Se ha recibido una nueva solicitud de asesoría desde la web:\n\n" .
-                  "• Plan Elegido: {$advisory->plan_type}\n" .
-                  "• Cliente: {$advisory->full_name}\n" .
-                  "• Correo: {$advisory->email}\n" .
-                  "• Teléfono: {$advisory->phone}\n" .
-                  "• Ciudad: {$advisory->ciudad}\n" .
-                  "• Tipo de Propiedad: " . ($advisory->property_type ?? 'No especificado') . "\n" .
-                  "• Ubicación: " . ($advisory->property_location ?? 'No especificada') . "\n" .
-                  "• Precio Estimado: $" . ($advisory->estimated_price ?? 'No especificado') . "\n" .
-                  "• Detalles: " . ($advisory->property_details ?? 'Ninguno') . "\n" .
-                  "• Notas adicionales: " . ($advisory->preferences_notes ?? 'Ninguna'), function ($message) use ($correosDestino, $advisory) {
-            $message->to($correosDestino)
-                    ->subject('Nueva Solicitud de Asesoría - Plan ' . $advisory->plan_type);
-        });
+        // 4. Enviar el correo de notificación a la inmobiliaria de manera segura
+        try {
+            $correosDestino = [
+                'inmobiliarialosandesecuador@gmail.com'
+            ];
 
-        // 4. Redireccionar con mensaje de éxito
+            $mensajeTexto = "Se ha recibido una nueva solicitud de asesoría desde la web:\n\n" .
+                "• Plan Elegido: {$advisory->plan_type}\n" .
+                "• Cliente: {$advisory->full_name}\n" .
+                "• Correo: " . ($advisory->email ?? 'No proporcionado') . "\n" .
+                "• Teléfono: {$advisory->phone}\n" .
+                "• Ciudad: {$advisory->ciudad}\n" .
+                "• Tipo de Propiedad: " . ($advisory->property_type ?? 'No especificado') . "\n" .
+                "• Ubicación: " . ($advisory->property_location ?? 'No especificada') . "\n" .
+                "• Precio Estimado: $" . ($advisory->estimated_price ?? 'No especificado') . "\n" .
+                "• Detalles: " . ($advisory->property_details ?? 'Ninguno') . "\n" .
+                "• Notas adicionales: " . ($advisory->preferences_notes ?? 'Ninguna');
+
+            Mail::raw($mensajeTexto, function ($message) use ($correosDestino, $advisory) {
+                $message->to($correosDestino)
+                        ->subject('Nueva Solicitud de Asesoría - Plan ' . $advisory->plan_type);
+            });
+        } catch (\Throwable $e) {
+            // Registrar error de envío en los logs de Laravel sin detener la experiencia del usuario
+            Log::error('Error al enviar correo de asesoría: ' . $e->getMessage());
+        }
+
+        // 5. Redireccionar con mensaje de éxito
         return back()->with('success', '¡Tu solicitud de asesoría ha sido registrada correctamente!');
     }
 }

@@ -35,18 +35,18 @@
                 </select>
             </div>
 
-            <div>
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Inmueble</label>
-                <select name="property_type" required class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
-                    <option value="Casa" {{ old('property_type', $property->property_type) == 'Casa' ? 'selected' : '' }}>Casa</option>
-                    <option value="Terrenos" {{ old('property_type', $property->property_type) == 'Terrenos' ? 'selected' : '' }}>Terrenos</option>
-                    <option value="Comerciales" {{ old('property_type', $property->property_type) == 'Comerciales' ? 'selected' : '' }}>Comerciales</option>
-                    <option value="Oficinas" {{ old('property_type', $property->property_type) == 'Oficinas' ? 'selected' : '' }}>Proyectos / Oficinas</option>
-                    <option value="Locales" {{ old('property_type', $property->property_type) == 'Locales' ? 'selected' : '' }}>Locales</option>
-                    <option value="Terrenos Grandes" {{ old('property_type', $property->property_type) == 'Terrenos Grandes' ? 'selected' : '' }}>Terrenos Grandes</option>
-                    <option value="Departamentos" {{ old('property_type', $property->property_type) == 'Departamentos' ? 'selected' : '' }}>Departamentos</option>
-                </select>
-            </div>
+<div>
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Inmueble</label>
+    <select name="property_type" required class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+        <option value="">Seleccione un tipo...</option>
+        <option value="Casa" {{ old('property_type', $property->property_type ?? '') == 'Casa' ? 'selected' : '' }}>Casa</option>
+        <option value="Terrenos" {{ old('property_type', $property->property_type ?? '') == 'Terrenos' ? 'selected' : '' }}>Terrenos</option>
+        <option value="Terrenos Grandes" {{ old('property_type', $property->property_type ?? '') == 'Terrenos Grandes' ? 'selected' : '' }}>Terrenos Grandes</option>
+        <option value="Proyectos" {{ old('property_type', $property->property_type ?? '') == 'Proyectos' ? 'selected' : '' }}>Proyectos</option>
+        <option value="Departamentos" {{ old('property_type', $property->property_type ?? '') == 'Departamentos' ? 'selected' : '' }}>Departamentos</option>
+        <option value="Comerciales" {{ old('property_type', $property->property_type ?? '') == 'Comerciales' ? 'selected' : '' }}>Comerciales</option>
+    </select>
+</div>
 
             <div>
                 <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Operación</label>
@@ -162,7 +162,7 @@
                 <input type="text" name="study_room" value="{{ old('study_room', $property->study_room) }}" placeholder="Ej: 1 Cuarto de Estudio" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
-            <!-- Características Clave y Servicios Básicos (Filtros de Barra Lateral Sincronizados) -->
+            <!-- Características Clave y Servicios Básicos -->
             <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-5 bg-[#FDFBF7] border border-emerald-200 rounded-2xl">
                 <span class="col-span-full uppercase text-[10px] text-emerald-800 font-extrabold tracking-wider mb-1">
                     <i class="fa-solid fa-check-to-slot mr-1 text-emerald-700"></i> Características Especiales y Servicios (Filtros del Catálogo)
@@ -281,12 +281,71 @@
                 <textarea name="description" rows="3" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">{{ old('description', $property->description) }}</textarea>
             </div>
 
-            <!-- Fotografías para la Galería -->
+            <!-- GALERÍA INTERACTIVA DE FOTOGRAFÍAS -->
             <div class="md:col-span-2 pt-4 border-t border-emerald-100">
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Agregar o Actualizar Fotografías (Galería Múltiple)</label>
-                <input type="file" name="images[]" multiple class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2C4A3E] file:text-white hover:file:bg-emerald-800 cursor-pointer">
-                <p class="text-[10px] text-gray-400 mt-1">Selecciona nuevas imágenes solo si deseas agregar más fotos a la galería existente.</p>
-            </div>
+                <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase mb-1">
+                    <i class="fa-solid fa-images mr-2"></i> Galería de Fotografías Existentes
+                </h3>
+                <p class="text-[10px] text-gray-400 mb-3">Arrastra las fotos para cambiar su orden de aparición. Usa ⭐ para fijar la portada principal y 🗑️ para eliminar.</p>
+
+                @if($property->images && $property->images->count() > 0)
+                    <div id="sortable-gallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
+                        @foreach($property->images->sortBy('position') as $image)
+                            <div data-id="{{ $image->id }}" class="relative group bg-[#FDFBF7] border border-emerald-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition cursor-grab active:cursor-grabbing">
+                                
+                                <!-- Badge de Foto Principal -->
+                                @if($image->is_primary)
+                                    <span class="badge-primary absolute top-2 left-2 z-10 bg-[#2C4A3E] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                                        <i class="fa-solid fa-star text-amber-300"></i> Principal
+                                    </span>
+                                @endif
+
+                                <!-- Previsualización de Imagen -->
+                                <img src="{{ asset('storage/' . $image->image_path) }}" alt="Foto propiedad" class="w-full h-32 object-cover">
+
+                                <!-- Acciones Flotantes en Hover -->
+                                <div class="absolute inset-0 bg-[#2C4A3E]/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[1px]">
+                                    <button type="button" 
+                                            onclick="setPrimaryImage({{ $image->id }})" 
+                                            title="Marcar como Foto Principal"
+                                            class="bg-amber-500 hover:bg-amber-600 text-white w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition shadow-sm">
+                                        <i class="fa-solid fa-star"></i>
+                                    </button>
+                                    <button type="button" 
+                                            onclick="deleteImage({{ $image->id }}, this)" 
+                                            title="Eliminar Foto"
+                                            class="bg-red-600 hover:bg-red-700 text-white w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition shadow-sm">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="p-4 bg-[#FDFBF7] border border-dashed border-emerald-200 rounded-2xl text-center text-gray-400 text-xs mb-4">
+                        <i class="fa-solid fa-image text-2xl mb-1 text-emerald-300"></i>
+                        <p>No hay fotografías registradas para esta propiedad.</p>
+                    </div>
+                @endif
+
+                <!-- Campo para Subir Más Fotografías -->
+<div class="mt-4">
+    <label class="block mb-2 uppercase text-[10px] font-extrabold text-[#2C4A3E]">
+        <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Agregar Nuevas Fotografías
+    </label>
+    
+    <input type="file" 
+           id="images-input" 
+           name="images[]" 
+           multiple 
+           accept="image/*"
+           onchange="previewNewImages(event)" 
+           class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2C4A3E] file:text-white hover:file:bg-emerald-800 cursor-pointer border border-emerald-200 rounded-xl bg-[#FDFBF7] p-1 shadow-sm">
+    
+    <p class="text-[10px] text-gray-400 mt-1">Puedes seleccionar varios archivos simultáneamente. Se añadirán a las fotos existentes al guardar los cambios.</p>
+
+    <!-- Contenedor donde se previsualizan las imágenes antes de guardar -->
+    <div id="new-images-preview" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-3"></div>
 
             <!-- 6. Redes Sociales y Difusión -->
             <div class="md:col-span-2 pt-4 border-t border-emerald-100">
@@ -314,8 +373,8 @@
             </div>
 
             <div>
-                <label class="block mb-2 uppercase text-[10px] text-gray-500"><i class="fa-solid fa-phone text-emerald-700 mr-1"></i> Teléfono WhatsApp (Difusión)</label>
-                <input type="text" name="whatsapp_phone" value="{{ old('whatsapp_phone', $property->whatsapp_phone) }}" placeholder="Ej: 0988059187" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <label class="block mb-2 uppercase text-[10px] text-gray-500"><i class="fa-solid fa-phone text-emerald-700 mr-1"></i> Teléfono de Contacto</label>
+                <input type="text" name="contact_phone" value="{{ old('contact_phone', $property->contact_phone) }}" placeholder="Ej: 0987894025" class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div>
@@ -331,4 +390,214 @@
         </div>
     </form>
 </div>
+
+<!-- LIBRERÍA SORTABLE JS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+// Objeto global para acumular múltiples selecciones de imágenes nuevas
+const selectedFilesDataTransfer = new DataTransfer();
+
+document.addEventListener('DOMContentLoaded', function () {
+    const gallery = document.getElementById('sortable-gallery');
+
+    if (gallery) {
+        new Sortable(gallery, {
+            animation: 150,
+            ghostClass: 'opacity-40',
+            dragClass: 'shadow-2xl',
+            onEnd: function () {
+                const order = Array.from(gallery.children).map(item => item.getAttribute('data-id'));
+
+                fetch("{{ route('properties.images.reorder') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order: order })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Al reordenar, la primera imagen pasa a ser la principal automáticamente
+                        if (gallery.children.length > 0) {
+                            const newFirstId = gallery.children[0].getAttribute('data-id');
+                            updatePrimaryBadgeUI(newFirstId);
+                        }
+                    } else {
+                        alert(data.message || 'Error al guardar el orden.');
+                    }
+                })
+                .catch(error => console.error('Error al guardar el orden:', error));
+            }
+        });
+    }
+});
+
+// Función para actualizar visualmente la insignia de Foto Principal
+function updatePrimaryBadgeUI(primaryId) {
+    document.querySelectorAll('.badge-primary').forEach(badge => badge.remove());
+    
+    const selectedItem = document.querySelector(`[data-id="${primaryId}"]`);
+    if (selectedItem) {
+        const newBadge = document.createElement('span');
+        newBadge.className = 'badge-primary absolute top-2 left-2 z-10 bg-[#2C4A3E] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1';
+        newBadge.innerHTML = '<i class="fa-solid fa-star text-amber-300"></i> Principal';
+        selectedItem.prepend(newBadge);
+    }
+}
+
+// Función para marcar una imagen como principal y moverla al inicio
+function setPrimaryImage(imageId) {
+    const url = "{{ route('properties.images.primary', ':id') }}".replace(':id', imageId);
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const gallery = document.getElementById('sortable-gallery');
+            const targetCard = document.querySelector(`[data-id="${imageId}"]`);
+
+            if (gallery && targetCard) {
+                // Mover físicamente la tarjeta al primer lugar de la galería
+                gallery.insertBefore(targetCard, gallery.firstChild);
+            }
+            updatePrimaryBadgeUI(imageId);
+        } else {
+            alert(data.message || 'Error al cambiar la foto principal.');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Función para eliminar una foto existente de la galería
+function deleteImage(imageId, buttonElement) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta fotografía?')) {
+        return;
+    }
+
+    const url = "{{ route('properties.images.destroy', ':id') }}".replace(':id', imageId);
+
+    fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const card = buttonElement.closest('[data-id]');
+            if (card) {
+                card.style.transition = 'all 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.8)';
+                setTimeout(() => {
+                    card.remove();
+
+                    const gallery = document.getElementById('sortable-gallery');
+                    if (gallery && gallery.children.length === 0) {
+                        gallery.parentElement.innerHTML = `
+                            <div id="empty-gallery-msg" class="p-8 bg-[#FDFBF7] border border-dashed border-emerald-200 rounded-2xl text-center text-gray-400 text-sm">
+                                <i class="fa-solid fa-image text-3xl mb-2 text-emerald-300"></i>
+                                <p>No hay fotografías registradas para esta propiedad actualmente.</p>
+                            </div>
+                        `;
+                    } else if (gallery && gallery.children.length > 0) {
+                        // Si se eliminó la principal, reasignar insignia a la nueva primera foto
+                        const newFirstId = gallery.children[0].getAttribute('data-id');
+                        updatePrimaryBadgeUI(newFirstId);
+                    }
+                }, 300);
+            }
+        } else {
+            alert(data.message || 'Error al eliminar la fotografía.');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+// Previsualización acumulativa de imágenes nuevas
+function previewNewImages(event) {
+    const input = event.target;
+    if (!input.files || input.files.length === 0) return;
+
+    // Agregar archivos seleccionados al acumulador
+    Array.from(input.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+            selectedFilesDataTransfer.items.add(file);
+        }
+    });
+
+    // Sincronizar el input HTML
+    input.files = selectedFilesDataTransfer.files;
+
+    renderPendingPreviews();
+}
+
+// Renderizar tarjetas de previsualización para archivos pendientes
+function renderPendingPreviews() {
+    const previewContainer = document.getElementById('new-images-preview');
+    if (!previewContainer) return;
+
+    previewContainer.innerHTML = '';
+
+    Array.from(selectedFilesDataTransfer.files).forEach((file, index) => {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            const card = document.createElement('div');
+            card.className = 'relative group bg-[#FDFBF7] border-2 border-dashed border-emerald-500 rounded-2xl overflow-hidden shadow-sm aspect-video flex items-center justify-center';
+
+            card.innerHTML = `
+                <img src="${e.target.result}" class="w-full h-32 object-cover">
+                
+                <span class="absolute top-2 left-2 z-10 bg-emerald-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-clock"></i> Pendiente
+                </span>
+
+                <button type="button" 
+                        onclick="removePendingImage(${index})" 
+                        title="Quitar de la selección" 
+                        class="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold transition shadow-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+
+            previewContainer.appendChild(card);
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+// Eliminar una imagen individual de la selección pendiente antes de guardar
+function removePendingImage(index) {
+    const input = document.getElementById('images-input');
+    const newDT = new DataTransfer();
+
+    Array.from(selectedFilesDataTransfer.files).forEach((file, i) => {
+        if (i !== index) {
+            newDT.items.add(file);
+        }
+    });
+
+    selectedFilesDataTransfer.items.clear();
+    Array.from(newDT.files).forEach(file => selectedFilesDataTransfer.items.add(file));
+
+    if (input) {
+        input.files = selectedFilesDataTransfer.files;
+    }
+
+    renderPendingPreviews();
+}
+</script>
 @endsection

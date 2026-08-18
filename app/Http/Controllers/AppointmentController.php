@@ -11,6 +11,7 @@ use App\Models\AdvisoryRequest;
 use App\Models\Tramite;
 use App\Models\Property;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class AppointmentController extends Controller
 {
@@ -47,7 +48,7 @@ class AppointmentController extends Controller
             $query->where('property_id', $request->property_id);
         }
 
-        // Filtro por Canal de Captación (Corregido a source_channel)
+        // Filtro por Canal de Captación
         if ($request->filled('channel')) {
             $query->where('source_channel', $request->channel);
         }
@@ -76,7 +77,7 @@ class AppointmentController extends Controller
         $asesores = User::all();
         $clientes = Client::all();
         
-        // Corregido: Se quita 'code' del select SQL para evitar error 1054
+        // Propiedades para selector de filtro
         $propiedades = Property::select('id', 'title')->get();
 
         return view('intranet.users.gestion-citas', compact('appointments', 'asesores', 'clientes', 'propiedades'));
@@ -87,7 +88,11 @@ class AppointmentController extends Controller
      */
     public function cambiarEstado(Request $request, $id)
     {
-        $cita = AppointmentTracking::with('client')->findOrFail($id);
+        $cita = AppointmentTracking::with('client')->find($id);
+
+        if (!$cita) {
+            return redirect()->back()->with('error', 'La cita solicitada no existe.');
+        }
         
         $request->validate([
             'status' => 'required|string|in:Pendiente,Agendado,Confirmada,Cancelado,Realizado',
@@ -135,7 +140,6 @@ class AppointmentController extends Controller
 
         return redirect()->back()->with('success', 'El estado de la cita ha sido actualizado correctamente.');
     }
-    
 
     /**
      * Bandeja Integral unificada (Contacts, AdvisoryRequests y Tramites).
@@ -182,7 +186,7 @@ class AppointmentController extends Controller
             $asesorias = $query->get()->map(function($item) {
                 $obj = new \stdClass();
                 $obj->id = 'advisory_' . $item->id;
-                $obj->origen_canal = 'Asesorías (' . ($item->plan_type ?? 'General') . ')';
+                $obj->origen_canal = 'Asesoría (' . ($item->plan_type ?? 'General') . ')';
                 $obj->nombre_cliente = $item->full_name ?? 'Sin nombre';
                 $obj->telefono_cliente = $item->phone ?? 'N/A';
                 $obj->detalle_ubicacion = $item->ciudad ?? 'N/A';
@@ -308,7 +312,7 @@ class AppointmentController extends Controller
      */
     public function storeIntegral(Request $request)
     {
-        $tipo = $request->input('tipo_registro', $request->input('nuevo_tipo'));
+        $tipo = $this->normalizarTipo($request->input('tipo_registro', $request->input('nuevo_tipo')));
         $direccionComun = $request->input('general_address')
                        ?? $request->input('ciudad')
                        ?? $request->input('ubicacion')
@@ -335,11 +339,14 @@ class AppointmentController extends Controller
             
             AdvisoryRequest::create([
                 'full_name'        => $nombreEntrada,
-                'email'            => $request->email ?? 'sin-correo@inmobiliarialosandes.com',
+                'email'            => $request->email ?? null,
                 'phone'            => $request->phone,
-                'plan_type'        => $request->plan_type ?? 'General',
+                'plan_type'        => $request->plan_type ?? 'Gratis',
                 'ciudad'           => $direccionComun,
+                'property_type'    => $request->property_type ?? 'Casa',
+                'estimated_price'  => $request->estimated_price ?? null,
                 'property_details' => $request->property_details ?? $request->requirements_message ?? $request->message ?? '',
+                'accepted_terms'   => 1,
                 'status'           => $request->status ?? 'Pendiente',
             ]);
         } elseif ($tipo === 'tramite') {
@@ -356,33 +363,43 @@ class AppointmentController extends Controller
                 'phone'               => $request->phone,
                 'identification_card' => $request->identification_card ?? '0000000000',
                 'subject'             => $request->subject ?? 'Trámite General',
-                'tramite_type'        => $request->tramite_type ?? 'General',
+                'tramite_type'        => $request->tramite_type ?? 'Otros trámites',
                 'ubicacion'           => $direccionComun,
                 'message'             => $request->message ?? $request->tramite_detalle ?? $request->requirements_message ?? '',
                 'status'              => $request->status ?? 'Pendiente',
             ]);
         }
 
-        return redirect()->route('admin.citas-totales')->with('success', '¡Registro procesado exitosamente!');
+        return redirect()->back()->with('success', '¡Registro procesado exitosamente!');
     }
 
+    /**
+     * Muestra la vista de edición con fallback seguro en lugar de pantalla 404.
+     */
     public function edit($id)
     {
+        $cleanId = preg_replace('/[^0-9]/', '', $id);
         $item = null;
         $tipo = '';
 
         if (str_starts_with($id, 'contact_')) {
-            $item = Contact::findOrFail(str_replace('contact_', '', $id));
+            $item = Contact::find($cleanId);
             $tipo = 'contacto';
         } elseif (str_starts_with($id, 'advisory_')) {
-            $item = AdvisoryRequest::findOrFail(str_replace('advisory_', '', $id));
+            $item = AdvisoryRequest::find($cleanId);
             $tipo = 'asesoria';
         } elseif (str_starts_with($id, 'tramite_')) {
-            $item = Tramite::findOrFail(str_replace('tramite_', '', $id));
+            $item = Tramite::find($cleanId);
             $tipo = 'tramite';
         } else {
-            $item = AppointmentTracking::findOrFail($id);
+            $item = AppointmentTracking::find($cleanId);
             $tipo = 'cita';
+        }
+
+        // Si el registro no se encuentra en la base de datos
+        if (!$item) {
+            return redirect()->route('admin.citas-totales')
+                ->with('error', 'El registro solicitado no existe o fue eliminado permanentemente.');
         }
 
         $asesores = User::all();
@@ -398,69 +415,95 @@ class AppointmentController extends Controller
 
     public function updateIntegral(Request $request, $id)
     {
-        $tipoOrigen = $request->input('tipo_origen');
-        $nuevoTipo  = $request->input('nuevo_tipo', $request->input('tipo_registro', $tipoOrigen));
-        $cleanId    = str_replace(['contact_', 'advisory_', 'tramite_'], '', $id);
+        // 1. Extraer ID numérico
+        $cleanId = preg_replace('/[^0-9]/', '', $id);
 
+        // 2. Normalizar tipo de origen y nuevo tipo (elimina tildes, mayúsculas y espacios)
+        $tipoOrigen = $this->normalizarTipo($request->input('tipo_origen'), $id);
+        $nuevoTipo  = $this->normalizarTipo($request->input('nuevo_tipo', $request->input('tipo_registro')));
+
+        // 3. PROCESO DE TRANSMUTACIÓN (si cambió de tabla)
         if ($tipoOrigen && $nuevoTipo && $tipoOrigen !== $nuevoTipo && $tipoOrigen !== 'cita') {
-            if ($tipoOrigen === 'contacto') {
-                Contact::where('id', $cleanId)->delete();
-            } elseif ($tipoOrigen === 'asesoria') {
-                AdvisoryRequest::where('id', $cleanId)->delete();
-            } elseif ($tipoOrigen === 'tramite') {
-                Tramite::where('id', $cleanId)->delete();
-            }
+            
+            return DB::transaction(function () use ($request, $tipoOrigen, $nuevoTipo, $cleanId) {
+                // A) Eliminar físicamente el registro original de su tabla de origen
+                if ($tipoOrigen === 'contacto') {
+                    Contact::where('id', $cleanId)->delete();
+                    DB::table('contacts')->where('id', $cleanId)->delete();
+                } elseif ($tipoOrigen === 'asesoria') {
+                    AdvisoryRequest::where('id', $cleanId)->delete();
+                    DB::table('advisory_requests')->where('id', $cleanId)->delete();
+                } elseif ($tipoOrigen === 'tramite') {
+                    Tramite::where('id', $cleanId)->delete();
+                    DB::table('tramites')->where('id', $cleanId)->delete();
+                }
 
-            $request->merge(['tipo_registro' => $nuevoTipo]);
-            return $this->storeIntegral($request);
+                // B) Crear el registro en la nueva tabla destino
+                $request->merge(['tipo_registro' => $nuevoTipo]);
+                $this->storeIntegral($request);
+
+                return redirect()->route('admin.citas-totales')
+                    ->with('success', '¡Registro transmutado y actualizado correctamente!');
+            });
         }
 
-        if (str_starts_with($id, 'contact_') || $tipoOrigen === 'contacto') {
-            $item = Contact::findOrFail($cleanId);
-            $nombreCompleto = $request->name ?? $item->name;
-            $parts = explode(' ', trim($nombreCompleto), 2);
+        // 4. ACTUALIZACIÓN REGULAR (si se mantiene en el mismo tipo)
+        if ($tipoOrigen === 'contacto' || str_starts_with($id, 'contact_')) {
+            $item = Contact::find($cleanId);
+            if ($item) {
+                $nombreCompleto = $request->name ?? $request->full_name ?? $item->name;
+                $parts = explode(' ', trim($nombreCompleto), 2);
 
-            $item->update([
-                'name'                 => $parts[0] ?? '',
-                'last_name'            => $parts[1] ?? ($item->last_name ?? 'Sin apellido'),
-                'phone'                => $request->phone ?? $item->phone,
-                'general_address'      => $request->general_address ?? $request->ciudad ?? $request->ubicacion ?? $item->general_address,
-                'requirements_message' => $request->requirements_message ?? $request->message ?? $request->property_details ?? $item->requirements_message,
-                'status'               => $request->status ?? $item->status,
-            ]);
-        } elseif (str_starts_with($id, 'advisory_') || $tipoOrigen === 'asesoria') {
-            $item = AdvisoryRequest::findOrFail($cleanId);
-            $item->update([
-                'full_name'        => $request->full_name ?? $request->name ?? $item->full_name,
-                'phone'            => $request->phone ?? $item->phone,
-                'plan_type'        => $request->plan_type ?? $item->plan_type,
-                'ciudad'           => $request->ciudad ?? $request->general_address ?? $request->ubicacion ?? $item->ciudad,
-                'property_details' => $request->property_details ?? $request->requirements_message ?? $request->message ?? $item->property_details,
-                'status'           => $request->status ?? $item->status,
-            ]);
-        } elseif (str_starts_with($id, 'tramite_') || $tipoOrigen === 'tramite') {
-            $item = Tramite::findOrFail($cleanId);
-            $nombreCompleto = $request->first_name ?? $request->name ?? $item->first_name;
-            $parts = explode(' ', trim($nombreCompleto), 2);
+                $item->update([
+                    'name'                 => $parts[0] ?? '',
+                    'last_name'            => $parts[1] ?? ($item->last_name ?? 'Sin apellido'),
+                    'phone'                => $request->phone ?? $item->phone,
+                    'general_address'      => $request->general_address ?? $request->ciudad ?? $request->ubicacion ?? $item->general_address,
+                    'requirements_message' => $request->requirements_message ?? $request->message ?? $request->property_details ?? $item->requirements_message,
+                    'status'               => $request->status ?? $item->status,
+                ]);
+            }
+        } elseif ($tipoOrigen === 'asesoria' || str_starts_with($id, 'advisory_')) {
+            $item = AdvisoryRequest::find($cleanId);
+            if ($item) {
+                $item->update([
+                    'full_name'        => $request->full_name ?? $request->name ?? $item->full_name,
+                    'phone'            => $request->phone ?? $item->phone,
+                    'plan_type'        => $request->plan_type ?? $item->plan_type,
+                    'ciudad'           => $request->ciudad ?? $request->general_address ?? $request->ubicacion ?? $item->ciudad,
+                    'property_type'    => $request->property_type ?? $item->property_type,
+                    'estimated_price'  => $request->estimated_price ?? $item->estimated_price,
+                    'property_details' => $request->property_details ?? $request->requirements_message ?? $request->message ?? $item->property_details,
+                    'status'           => $request->status ?? $item->status,
+                ]);
+            }
+        } elseif ($tipoOrigen === 'tramite' || str_starts_with($id, 'tramite_')) {
+            $item = Tramite::find($cleanId);
+            if ($item) {
+                $nombreCompleto = $request->first_name ?? $request->name ?? $item->first_name;
+                $parts = explode(' ', trim($nombreCompleto), 2);
 
-            $item->update([
-                'first_name'          => $parts[0] ?? '',
-                'last_name'           => $parts[1] ?? ($item->last_name ?? 'Sin apellido'),
-                'phone'               => $request->phone ?? $item->phone,
-                'identification_card' => $request->identification_card ?? $item->identification_card,
-                'subject'             => $request->subject ?? $item->subject,
-                'tramite_type'        => $request->tramite_type ?? $item->tramite_type,
-                'ubicacion'           => $request->ubicacion ?? $request->general_address ?? $request->ciudad ?? $item->ubicacion,
-                'message'             => $request->message ?? $request->requirements_message ?? $request->property_details ?? $item->message,
-                'status'              => $request->status ?? $item->status,
-            ]);
+                $item->update([
+                    'first_name'          => $parts[0] ?? '',
+                    'last_name'           => $parts[1] ?? ($item->last_name ?? 'Sin apellido'),
+                    'phone'               => $request->phone ?? $item->phone,
+                    'identification_card' => $request->identification_card ?? $item->identification_card,
+                    'subject'             => $request->subject ?? $item->subject,
+                    'tramite_type'        => $request->tramite_type ?? $item->tramite_type,
+                    'ubicacion'           => $request->ubicacion ?? $request->general_address ?? $request->ciudad ?? $item->ubicacion,
+                    'message'             => $request->message ?? $request->requirements_message ?? $request->property_details ?? $item->message,
+                    'status'              => $request->status ?? $item->status,
+                ]);
+            }
         } else {
-            $item = AppointmentTracking::findOrFail($cleanId);
-            $item->update($request->only([
-                'client_id', 'user_id', 'property_id', 'appointment_date', 
-                'location_reference', 'status', 'type', 'priority', 'notes',
-                'source_channel', 'cancellation_reason', 'rescued_to_portfolio'
-            ]));
+            $item = AppointmentTracking::find($cleanId);
+            if ($item) {
+                $item->update($request->only([
+                    'client_id', 'user_id', 'property_id', 'appointment_date', 
+                    'location_reference', 'status', 'type', 'priority', 'notes',
+                    'source_channel', 'cancellation_reason', 'rescued_to_portfolio'
+                ]));
+            }
         }
 
         return redirect()->route('admin.citas-totales')->with('success', '¡Registro actualizado correctamente!');
@@ -468,16 +511,21 @@ class AppointmentController extends Controller
 
     public function gestionar($id)
     {
+        $cleanId = preg_replace('/[^0-9]/', '', $id);
         $item = null;
 
         if (str_starts_with($id, 'contact_')) {
-            $item = Contact::findOrFail(str_replace('contact_', '', $id));
+            $item = Contact::find($cleanId);
         } elseif (str_starts_with($id, 'advisory_')) {
-            $item = AdvisoryRequest::findOrFail(str_replace('advisory_', '', $id));
+            $item = AdvisoryRequest::find($cleanId);
         } elseif (str_starts_with($id, 'tramite_')) {
-            $item = Tramite::findOrFail(str_replace('tramite_', '', $id));
+            $item = Tramite::find($cleanId);
         } else {
-            $item = AppointmentTracking::findOrFail($id);
+            $item = AppointmentTracking::find($cleanId);
+        }
+
+        if (!$item) {
+            return redirect()->back()->with('error', 'No se encontró el registro para actualizar estado.');
         }
 
         $estadoActual = (empty($item->status) || $item->status == 'Nuevo') ? 'Pendiente' : $item->status;
@@ -497,7 +545,12 @@ class AppointmentController extends Controller
 
     public function exportar($id)
     {
-        $cita = AppointmentTracking::with(['client', 'user', 'property'])->findOrFail($id);
+        $cita = AppointmentTracking::with(['client', 'user', 'property'])->find($id);
+        
+        if (!$cita) {
+            return redirect()->back()->with('error', 'No se encontró la ficha de la cita.');
+        }
+
         return view('intranet.users.ficha-cita', compact('cita'));
     }
 
@@ -510,17 +563,21 @@ class AppointmentController extends Controller
 
     public function destroyIntegral($id)
     {
-        $cleanId = str_replace(['contact_', 'advisory_', 'tramite_'], '', $id);
+        $cleanId = preg_replace('/[^0-9]/', '', $id);
 
         try {
             if (str_starts_with($id, 'contact_')) {
-                $model = Contact::findOrFail($cleanId);
+                $model = Contact::find($cleanId);
             } elseif (str_starts_with($id, 'advisory_')) {
-                $model = AdvisoryRequest::findOrFail($cleanId);
+                $model = AdvisoryRequest::find($cleanId);
             } elseif (str_starts_with($id, 'tramite_')) {
-                $model = Tramite::findOrFail($cleanId);
+                $model = Tramite::find($cleanId);
             } else {
-                $model = AppointmentTracking::findOrFail($cleanId);
+                $model = AppointmentTracking::find($cleanId);
+            }
+
+            if (!$model) {
+                return redirect()->back()->with('error', 'El registro ya no existe.');
             }
 
             $model->status = 'eliminado';
@@ -534,17 +591,21 @@ class AppointmentController extends Controller
 
     public function restaurar($id)
     {
-        $cleanId = str_replace(['contact_', 'advisory_', 'tramite_'], '', $id);
+        $cleanId = preg_replace('/[^0-9]/', '', $id);
 
         try {
             if (str_starts_with($id, 'contact_')) {
-                $model = Contact::findOrFail($cleanId);
+                $model = Contact::find($cleanId);
             } elseif (str_starts_with($id, 'advisory_')) {
-                $model = AdvisoryRequest::findOrFail($cleanId);
+                $model = AdvisoryRequest::find($cleanId);
             } elseif (str_starts_with($id, 'tramite_')) {
-                $model = Tramite::findOrFail($cleanId);
+                $model = Tramite::find($cleanId);
             } else {
-                $model = AppointmentTracking::findOrFail($cleanId);
+                $model = AppointmentTracking::find($cleanId);
+            }
+
+            if (!$model) {
+                return redirect()->back()->with('error', 'El registro no se encuentra para restaurar.');
             }
 
             $model->status = 'Pendiente';
@@ -558,17 +619,21 @@ class AppointmentController extends Controller
 
     public function forzarEliminar($id)
     {
-        $cleanId = str_replace(['contact_', 'advisory_', 'tramite_'], '', $id);
+        $cleanId = preg_replace('/[^0-9]/', '', $id);
 
         try {
             if (str_starts_with($id, 'contact_')) {
-                $model = Contact::findOrFail($cleanId);
+                $model = Contact::find($cleanId);
             } elseif (str_starts_with($id, 'advisory_')) {
-                $model = AdvisoryRequest::findOrFail($cleanId);
+                $model = AdvisoryRequest::find($cleanId);
             } elseif (str_starts_with($id, 'tramite_')) {
-                $model = Tramite::findOrFail($cleanId);
+                $model = Tramite::find($cleanId);
             } else {
-                $model = AppointmentTracking::findOrFail($cleanId);
+                $model = AppointmentTracking::find($cleanId);
+            }
+
+            if (!$model) {
+                return redirect()->back()->with('error', 'El registro no existe o ya fue eliminado.');
             }
 
             $model->delete();
@@ -577,5 +642,27 @@ class AppointmentController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al eliminar permanentemente: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Función auxiliar para estandarizar los tipos de datos recibidos y prevenir errores.
+     */
+    private function normalizarTipo($cadena, $id = '')
+    {
+        $cadena = strtolower(trim($cadena ?? ''));
+        $cadena = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $cadena);
+
+        if (str_contains($cadena, 'contact')) return 'contacto';
+        if (str_contains($cadena, 'asesor')) return 'asesoria';
+        if (str_contains($cadena, 'tramite')) return 'tramite';
+        if (str_contains($cadena, 'cita')) return 'cita';
+
+        if (!empty($id)) {
+            if (str_starts_with($id, 'contact_')) return 'contacto';
+            if (str_starts_with($id, 'advisory_')) return 'asesoria';
+            if (str_starts_with($id, 'tramite_')) return 'tramite';
+        }
+
+        return $cadena;
     }
 }

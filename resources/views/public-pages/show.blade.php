@@ -1,7 +1,7 @@
 @extends('layouts.public')
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-6 font-sans" 
+<div class="max-w-[98rem] mx-auto px-4 pb-16 space-y-4 font-sans"
      x-data="{ 
          images: [
              @foreach($property->images as $image)
@@ -24,79 +24,85 @@
          },
          nextThumb() {
              const container = document.getElementById('thumbnail-container');
-             if (container) container.scrollBy({ left: 200, behavior: 'smooth' });
+             if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
          },
          prevThumb() {
              const container = document.getElementById('thumbnail-container');
-             if (container) container.scrollBy({ left: -200, behavior: 'smooth' });
+             if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
          }
      }">
     
-    <!-- BOTÓN DE RETORNO -->
-    <div class="flex justify-between items-center bg-white px-4 py-2.5 rounded-2xl border shadow-sm">
-        <a href="{{ route('public.catalogo.index') }}" class="text-xs font-bold text-gray-700 hover:text-emerald-700 flex items-center gap-1.5 transition">
+    <!-- ENLACE DE RETORNO -->
+    <div class="flex items-center">
+        <a href="{{ route('public.catalogo.index') }}" class="text-xs font-bold text-[#2C4A3E] hover:text-emerald-700 flex items-center gap-1.5 transition">
             <i class="fa-solid fa-chevron-left text-[10px]"></i> Volver al Catálogo
         </a>
     </div>
 
-    <!-- CONTENEDOR PRINCIPAL -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- CONTENEDOR PRINCIPAL A 2 COLUMNAS (ALINEACIÓN IDÉNTICA A INTRANET) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-[2px] items-start"> 
         
-        <!-- COLUMNA IZQUIERDA: LLAMANDO AL COMPONENTE COMPARTIDO -->
-        <div class="lg:col-span-4 bg-white p-6 rounded-3xl border shadow-sm space-y-4">
-            
-            <!-- AQUÍ SE INCRUSTA TODO EL BLOQUE DE LA PROPIEDAD AUTOMÁTICAMENTE -->
-            <x-property-details :property="$property" />
-
-            <!-- BOTÓN DE WHATSAPP (Exclusivo o adaptado para el público) -->
-            @if(!empty($property->whatsapp_phone))
-            <div class="pt-4 border-t">
-                <a href="https://wa.me/{{ $property->whatsapp_phone }}?text=Hola,%20estoy%20interesado%20en%20la%20propiedad:%20{{ urlencode($property->title) }}" 
-                   target="_blank" 
-                   class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition shadow-md text-sm">
-                    <i class="fa-brands fa-whatsapp text-lg"></i> Consultar por WhatsApp
-                </a>
-            </div>
-            @endif
+        <!-- COLUMNA IZQUIERDA: DETALLES DE LA PROPIEDAD -->
+        <div class="lg:col-span-4 lg:max-w-[370px] ml-auto bg-[#FDFBF7] p-2 rounded-3xl border border-emerald-200/80 shadow-sm">
+            <x-property-details :property="$property" :showContact="true" />
         </div>
 
-        <!-- COLUMNA DERECHA: IMÁGENES (Galería) -->
+        <!-- COLUMNA DERECHA: GALERÍA DE IMÁGENES DE ALTA VISIBILIDAD -->
         <div class="lg:col-span-8 space-y-3">
-            <div class="bg-white p-3 rounded-3xl border shadow-sm space-y-3">
-                <!-- Visor principal y miniaturas de imágenes -->
-                <div class="relative w-full bg-black rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
-                    <template x-if="images.length > 0">
-                        <div class="w-full flex items-center justify-center relative">
-                            <img :src="activeImage" class="w-full h-auto max-h-[580px] object-cover transition-all duration-300">
-                            <button @click="prevImage()" class="absolute left-3 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full backdrop-blur-md transition flex items-center justify-center shadow-lg"><i class="fa-solid fa-chevron-left text-sm"></i></button>
-                            <button @click="nextImage()" class="absolute right-3 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full backdrop-blur-md transition flex items-center justify-center shadow-lg"><i class="fa-solid fa-chevron-right text-sm"></i></button>
-                            <div class="absolute bottom-3 right-3 bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-xl backdrop-blur-md">
+            <div class="bg-white p-3 rounded-3xl border border-emerald-100 shadow-sm space-y-3">
+               <!-- GALERÍA PRINCIPAL -->
+<div class="relative w-full bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-emerald-100 shadow-inner group">
+    <template x-if="images.length > 0">
+        <div class="w-full flex items-center justify-center relative">
+        <img :src="activeImage" class="w-full h-auto max-h-[580px] object-cover transition-all duration-300">
+
+            {{-- SOMBRA SUAVE SUPERIOR --}}
+            <div class="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/30 to-transparent pointer-events-none"></div>
+
+
+            {{-- ANTERIOR --}}
+ <button @click="prevImage()" class="absolute left-3 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full backdrop-blur-md transition flex items-center justify-center shadow-lg cursor-pointer">
+                                <i class="fa-solid fa-chevron-left text-sm"></i>
+                            </button>
+
+ <button @click="nextImage()" class="absolute right-3 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full backdrop-blur-md transition flex items-center justify-center shadow-lg cursor-pointer">
+                                <i class="fa-solid fa-chevron-right text-sm"></i>
+                            </button>
+                            <div class="absolute bottom-3 right-3 bg-black/70 text-white text-[11px] font-bold px-3 py-1 rounded-xl backdrop-blur-md shadow">
                                 <span x-text="currentIndex + 1"></span> / <span x-text="images.length"></span>
                             </div>
                         </div>
                     </template>
+
+
                     <template x-if="images.length === 0">
-                        <div class="h-[400px] flex flex-col items-center justify-center text-gray-400 space-y-2">
+                        <div class="h-[400px] flex flex-col items-center justify-center text-emerald-800/40 space-y-2">
                             <i class="fa-solid fa-house-chimney-crack text-4xl"></i>
-                            <span class="text-xs font-bold uppercase">Sin fotografías disponibles</span>
+                            <span class="text-xs font-bold uppercase">Sin fotografías registradas</span>
                         </div>
                     </template>
                 </div>
 
-                <!-- Miniaturas -->
-                <template x-if="images.length > 0">
+            <!-- MINIATURAS -->
+<template x-if="images.length > 0">
                     <div class="relative flex items-center px-6">
-                        <button @click="prevThumb()" class="absolute left-0 z-10 bg-white hover:bg-gray-100 text-gray-800 shadow-md border p-2.5 rounded-full transition flex items-center justify-center"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                        <div id="thumbnail-container" class="flex gap-2.5 overflow-x-auto scroll-smooth py-1 px-1 w-full">
+                        <button @click="prevThumb()" class="absolute left-0 z-10 bg-white hover:bg-emerald-50 text-emerald-900 shadow-md border border-emerald-200 p-2.5 rounded-full transition flex items-center justify-center cursor-pointer">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+
+                        <div id="thumbnail-container" class="flex gap-2.5 overflow-x-auto scroll-smooth py-1 px-1 no-scrollbar w-full">
                             <template x-for="(img, index) in images" :key="index">
                                 <div @click="currentIndex = index" 
                                      class="h-20 w-28 flex-shrink-0 rounded-xl overflow-hidden border-2 cursor-pointer transition transform hover:scale-105"
-                                     :class="currentIndex === index ? 'border-emerald-600 shadow-md ring-2 ring-emerald-600/30' : 'border-transparent opacity-60 hover:opacity-100'">
+                                     :class="currentIndex === index ? 'border-emerald-700 shadow-md ring-2 ring-emerald-600/30' : 'border-transparent opacity-60 hover:opacity-100'">
                                     <img :src="img" class="w-full h-full object-cover">
                                 </div>
                             </template>
                         </div>
-                        <button @click="nextThumb()" class="absolute right-0 z-10 bg-white hover:bg-gray-100 text-gray-800 shadow-md border p-2.5 rounded-full transition flex items-center justify-center"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+
+                        <button @click="nextThumb()" class="absolute right-0 z-8 bg-white hover:bg-emerald-50 text-emerald-900 shadow-md border border-emerald-200 p-2.5 rounded-full transition flex items-center justify-center cursor-pointer">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
                     </div>
                 </template>
             </div>

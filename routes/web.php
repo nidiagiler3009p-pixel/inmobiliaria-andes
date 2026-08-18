@@ -15,6 +15,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdvisoryRequestController;
 use App\Http\Controllers\PublicPropertyController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\PropertyImageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +88,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/intranet/postulaciones/{application}/contratar', [JobApplicationController::class, 'contratar'])->name('intranet.applications.contratar');
     Route::delete('/intranet/postulaciones/{application}', [JobApplicationController::class, 'destroy'])->name('intranet.applications.destroy');
 
+    // MÓDULO DE IMÁGENES DE PROPIEDADES
+    Route::get('/intranet/properties/{property}/images', [PropertyImageController::class, 'index'])->name('properties.images.index');
+    Route::post('/intranet/properties/{property}/images', [PropertyImageController::class, 'store'])->name('properties.images.store');
+    Route::post('/intranet/properties/images/reorder', [PropertyImageController::class, 'reorder'])->name('properties.images.reorder');
+    Route::post('/intranet/properties/images/{image}/primary', [PropertyImageController::class, 'setPrimary'])->name('properties.images.primary');
+    Route::delete('/intranet/properties/images/{image}', [PropertyImageController::class, 'destroy'])->name('properties.images.destroy');
+
     // ------------------------------------------
     // MÓDULO DE AGENDA Y CITAS INTEGRALES
     // ------------------------------------------
@@ -104,23 +112,52 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/citas-integrales', [AppointmentController::class, 'storeIntegral'])->name('admin.citas.storeIntegral');
     Route::post('/admin/integrales/store', [AppointmentController::class, 'storeIntegral'])->name('admin.integrales.store');
 
-    // Acciones sobre Citas e Integrales
-    Route::get('/admin/citas/{id}/edit', [AppointmentController::class, 'edit'])->name('admin.citas.edit');
-    Route::get('/admin/citas/{id}/exportar', [AppointmentController::class, 'exportar'])->name('admin.citas.exportar');
-    Route::patch('/admin/citas/{id}/gestionar', [AppointmentController::class, 'gestionar'])->name('admin.citas.gestionar');
-    Route::put('/admin/citas/{id}', [AppointmentController::class, 'updateIntegral'])->name('admin.citas.update');
-    Route::match(['put', 'patch'], '/intranet/citas/{id}/estado', [AppointmentController::class, 'cambiarEstado'])->name('citas.estado');
+    // Acciones sobre Citas e Integrales (Permitir IDs alfanuméricos como advisory_18, contact_5, etc.)
+    Route::get('/admin/citas/{id}/edit', [AppointmentController::class, 'edit'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.citas.edit');
+
+    Route::get('/admin/citas/{id}/exportar', [AppointmentController::class, 'exportar'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.citas.exportar');
+
+    Route::patch('/admin/citas/{id}/gestionar', [AppointmentController::class, 'gestionar'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.citas.gestionar');
+
+    Route::put('/admin/citas/{id}', [AppointmentController::class, 'updateIntegral'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.citas.update');
+
+    Route::match(['put', 'patch'], '/intranet/citas/{id}/estado', [AppointmentController::class, 'cambiarEstado'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('citas.estado');
     
     // Eliminación (Reciclaje / Soft Delete)
-    Route::delete('/admin/citas/{id}', [AppointmentController::class, 'destroyIntegral'])->name('gestion.citas.destroy');
-    Route::delete('/admin/integrales/{id}', [AppointmentController::class, 'destroyIntegral'])->name('admin.integrales.destroy');
+    Route::delete('/admin/citas/{id}', [AppointmentController::class, 'destroyIntegral'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('gestion.citas.destroy');
+
+    Route::delete('/admin/integrales/{id}', [AppointmentController::class, 'destroyIntegral'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.integrales.destroy');
     
     // Papelera, Restauración y Eliminación Definitiva
-    Route::patch('/admin/citas/{id}/restaurar', [AppointmentController::class, 'restaurar'])->name('admin.citas.restaurar');
-    Route::patch('/admin/integrales/{id}/restaurar', [AppointmentController::class, 'restaurar'])->name('admin.integrales.restaurar');
+    Route::patch('/admin/citas/{id}/restaurar', [AppointmentController::class, 'restaurar'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.citas.restaurar');
+
+    Route::patch('/admin/integrales/{id}/restaurar', [AppointmentController::class, 'restaurar'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.integrales.restaurar');
     
-    Route::delete('/admin/citas/{id}/forzar-eliminar', [AppointmentController::class, 'forzarEliminar'])->name('admin.citas.forzar-eliminar');
-    Route::delete('/admin/integrales/{id}/forzar-eliminar', [AppointmentController::class, 'forzarEliminar'])->name('admin.integrales.forzarEliminar');
+    Route::delete('/admin/citas/{id}/forzar-eliminar', [AppointmentController::class, 'forzarEliminar'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.citas.forzar-eliminar');
+
+    Route::delete('/admin/integrales/{id}/forzar-eliminar', [AppointmentController::class, 'forzarEliminar'])
+        ->where('id', '[A-Za-z0-9_]+')
+        ->name('admin.integrales.forzarEliminar');
 
     // ------------------------------------------
     // MÓDULO DE CONTABILIDAD

@@ -12,6 +12,13 @@ class PropertyImage extends Model
     protected $fillable = [
         'property_id',
         'image_path',
+        'position',
+        'is_primary',
+    ];
+
+    protected $casts = [
+        'is_primary' => 'boolean',
+        'position' => 'integer',
     ];
 
     public function property()

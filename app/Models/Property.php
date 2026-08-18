@@ -89,10 +89,10 @@ class Property extends Model
         'construction_area_m2' => 'decimal:2',
     ];
 
-    public function images()
-    {
-        return $this->hasMany(PropertyImage::class);
-    }
+  public function images()
+{
+    return $this->hasMany(PropertyImage::class)->orderBy('position', 'asc');
+}
 
     public function user()
     {

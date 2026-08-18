@@ -52,10 +52,10 @@
     </div>
 
     <!-- CONTENEDOR PRINCIPAL -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-[2px] items-start">
         
         <!-- COLUMNA IZQUIERDA: DETALLES (USANDO EL COMPONENTE COMPARTIDO) -->
-        <div class="lg:col-span-4 bg-[#FDFBF7] p-4 rounded-3xl border border-emerald-200/80 shadow-sm">
+        <div class="lg:col-span-4 lg:max-w-[370px] ml-auto bg-[#FDFBF7] p-2 rounded-3xl border border-emerald-200/80 shadow-sm">
             <x-property-details :property="$property" />
         </div>
 
