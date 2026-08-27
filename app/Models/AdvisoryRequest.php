@@ -9,6 +9,7 @@ class AdvisoryRequest extends Model
     use HasFactory;
 
     protected $fillable = [
+        'prospect_id',
         'plan_type',
         'advisor_id',
         'full_name',

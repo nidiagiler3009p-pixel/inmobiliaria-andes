@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ProspectService;
 
 class PublicPropertyController extends Controller
 {
@@ -335,126 +336,34 @@ if ($request->filled('max_price') && (float)$request->max_price > 0) {
         return redirect('/intranet/properties')->with('success', 'Propiedad eliminada correctamente.');
     }
 
-    public function sendPublicMessage(Request $request)
-    {
-        $request->validate([
-            'name'             => 'required|string|max:255',
-            'phone'            => 'required|string|max:50',
-            'message'          => 'nullable|string',
-            'property_id'      => 'nullable|exists:properties,id',
-            'appointment_id'   => 'nullable|exists:appointments_tracking,id',
-            'want_appointment' => 'nullable|boolean',
-            'appointment_date' => 'nullable',
-            'appointment_time' => 'nullable|string',
-            'meeting_place'    => 'nullable|string|max:255',
-        ]);
-
-        return DB::transaction(function () use ($request) {
-            $agentId = null;
-            $agentName = 'un asesor comercial';
-            $propertyTitle = '';
-
-            if ($request->filled('property_id')) {
-                $property = Property::with('user')->find($request->property_id);
-                if ($property) {
-                    $propertyTitle = $property->title;
-                    if ($property->user) {
-                        $agentName = $property->user->name;
-                        $agentId   = $property->user->id;
-                    }
-                }
-            }
-
-            $fullName   = trim($request->name);
-            $nameParts   = explode(' ', $fullName, 2);
-            $firstName   = $nameParts[0];
-            $lastName    = $nameParts[1] ?? '';
-            $clientEmail = $request->email ?: ($request->phone . '@sinemail.com');
-
-            $client = Client::firstOrCreate(
-                ['phone' => $request->phone],
-                [
-                    'name'                => $firstName,
-                    'last_name'           => $lastName,
-                    'email'               => $clientEmail,
-                    'origin_module'       => 'Catálogo Público',
-                    'social_media_source' => 'Sitio Web',
-                    'status'              => 'Interesado',
-                    'user_id'             => $agentId,
-                ]
-            );
-
-            if (!$client->wasRecentlyCreated) {
-                $client->update([
-                    'name'      => $firstName,
-                    'last_name' => $lastName,
-                ]);
-            }
-
-            $isAppointment = $request->filled('want_appointment') && $request->filled('appointment_date');
-
-            if ($isAppointment) {
-                $dateOnly = $request->appointment_date;
-                $timeOnly = $request->appointment_time ?: '09:00';
-                $appointmentDatetime = $dateOnly . ' ' . $timeOnly;
-                $type = 'Visita Guiada';
-            } else {
-                $appointmentDatetime = null;
-                $type = 'Consulta Directa';
-            }
-
-            $locationRef = $request->filled('meeting_place') ? $request->meeting_place : 'Por confirmar';
-
-            $dataToSave = [
-                'client_id'          => $client->id,
-                'user_id'            => $agentId,
-                'property_id'        => $request->property_id,
-                'registration_date'  => now(),
-                'appointment_date'   => $appointmentDatetime,
-                'location_reference' => $locationRef,
-                'status'             => 'Pendiente',
-                'notes'              => $request->message ?: 'Mensaje sin observaciones',
-                'type'               => $type,
-                'priority'           => 'Media',
-                'source_channel'     => 'Sitio Web',
-                'is_notified'        => false,
-            ];
-
-            $tracking = $request->filled('appointment_id')
-                ? AppointmentTracking::find($request->appointment_id)
-                : null;
-
-            if ($tracking) {
-                $dataToSave['status'] = 'agendada';
-                $tracking->update($dataToSave);
-            } else {
-                $tracking = AppointmentTracking::create($dataToSave);
-            }
-
-            if ($isAppointment) {
-                Carbon::setLocale('es');
-                $formattedDate = Carbon::parse($dateOnly)->translatedFormat('j \d\e F');
-
-                return redirect()->back()->with('appointment_confirmed', [
-                    'appointment_id'   => $tracking->id,
-                    'client_name'      => $fullName,
-                    'name'             => $fullName,
-                    'agent_name'       => $agentName,
-                    'date'             => $formattedDate,
-                    'time'             => $timeOnly,
-                    'property_title'   => $propertyTitle,
-                    'phone'            => $request->phone,
-                    'appointment_date' => $dateOnly,
-                    'appointment_time' => $timeOnly,
-                    'meeting_place'    => $request->meeting_place,
-                    'message'          => $request->message,
-                    'want_appointment' => true,
-                ]);
-            }
-
-            return redirect()->back()->with('success', 'Tu mensaje ha sido enviado con éxito, pronto un asesor se contactará contigo.');
-        });
-    }
+   public function sendPublicMessage(Request $request, ProspectService $prospectService) {
+    $request->validate(['name' => 'required|string|max:255','phone' => 'required|string|max:50','email' => 'nullable|email|max:255','message' => 'nullable|string','property_id' => 'nullable|exists:properties,id','appointment_id' => 'nullable|exists:appointments_tracking,id','want_appointment' => 'nullable|boolean','appointment_date' => 'nullable','appointment_time' => 'nullable|string','meeting_place' => 'nullable|string|max:255']);
+    return DB::transaction(function () use ($request, $prospectService) {
+        /* |-------------------------------------------------------------------------- | 1. OBTENER PROPIEDAD Y ASESOR |-------------------------------------------------------------------------- */ $agentId = null; $agentName = 'un asesor comercial'; $propertyTitle = '';
+        if ($request->filled('property_id')) {
+            $property = Property::with('user')->find($request->property_id);
+            if ($property) { $propertyTitle = $property->title; if ($property->user) { $agentName = $property->user->name; $agentId = $property->user->id; } }
+        }
+        /* |-------------------------------------------------------------------------- | 2. SEPARAR NOMBRE |-------------------------------------------------------------------------- */ $fullName = trim($request->name); $nameParts = explode(' ', $fullName, 2); $firstName = $nameParts[0]; $lastName = $nameParts[1] ?? '';
+        /* |-------------------------------------------------------------------------- | 3. BUSCAR O CREAR PROSPECTO |-------------------------------------------------------------------------- | | Ya NO creamos Client aquí. | */ $prospect = $prospectService->findOrCreate($firstName, $lastName, $request->phone, $request->email, null, 'Catálogo Público');
+        /* |-------------------------------------------------------------------------- | 4. DETERMINAR SI ES CITA O CONSULTA |-------------------------------------------------------------------------- */ $isAppointment = $request->filled('want_appointment') && $request->filled('appointment_date');
+        if ($isAppointment) { $dateOnly = $request->appointment_date; $timeOnly = $request->appointment_time ?: '09:00'; $appointmentDatetime = $dateOnly . ' ' . $timeOnly; $type = 'Visita Guiada'; }
+        else { $dateOnly = null; $timeOnly = null; $appointmentDatetime = null; $type = 'Consulta Directa'; }
+        /* |-------------------------------------------------------------------------- | 5. LUGAR |-------------------------------------------------------------------------- */ $locationRef = $request->filled('meeting_place') ? $request->meeting_place : 'Por confirmar';
+        /* |-------------------------------------------------------------------------- | 6. DATOS DE APPOINTMENTS_TRACKING |-------------------------------------------------------------------------- */ $dataToSave = ['client_id' => null,'prospect_id' => $prospect->id,'user_id' => $agentId,'property_id' => $request->property_id,'registration_date' => now(),'appointment_date' => $appointmentDatetime,'location_reference' => $locationRef,'status' => 'Pendiente','notes' => $request->message ?: 'Mensaje sin observaciones','type' => $type,'priority' => 'Media','source_channel' => 'Sitio Web','is_notified' => false];
+        /* |-------------------------------------------------------------------------- | 7. CREAR O ACTUALIZAR CITA |-------------------------------------------------------------------------- */ $tracking = $request->filled('appointment_id') ? AppointmentTracking::find($request->appointment_id) : null; $estadoAnterior = null;
+        if ($tracking) { $estadoAnterior = $tracking->status; $dataToSave['status'] = 'agendada'; $tracking->update($dataToSave); }
+        else { $tracking = AppointmentTracking::create($dataToSave); }
+        /* |-------------------------------------------------------------------------- | 8. REGISTRAR HISTORIAL DEL PROSPECTO |-------------------------------------------------------------------------- */ $descripcion = $isAppointment ? 'El prospecto solicitó una cita desde el catálogo público.' : 'El prospecto realizó una consulta desde el catálogo público.';
+        if ($propertyTitle) $descripcion .= ' Propiedad: ' . $propertyTitle . '.';
+        if ($appointmentDatetime) $descripcion .= ' Fecha: ' . Carbon::parse($appointmentDatetime)->format('d/m/Y H:i') . '.';
+        if ($locationRef) $descripcion .= ' Lugar: ' . $locationRef . '.';
+        if ($request->message) $descripcion .= ' Observaciones: ' . $request->message;
+        $prospectService->addHistory($prospect, $isAppointment ? 'Cita solicitada desde catálogo' : 'Consulta desde catálogo', 'appointment', $tracking->id, $estadoAnterior, $tracking->status, $descripcion, $agentId);
+        /* |-------------------------------------------------------------------------- | 9. RESPUESTA CUANDO SOLICITA CITA |-------------------------------------------------------------------------- */ if ($isAppointment) { Carbon::setLocale('es'); $formattedDate = Carbon::parse($dateOnly)->translatedFormat('j \d\e F'); return redirect()->back()->with('appointment_confirmed', ['appointment_id' => $tracking->id,'client_name' => $fullName,'name' => $fullName,'agent_name' => $agentName,'date' => $formattedDate,'time' => $timeOnly,'property_title' => $propertyTitle,'phone' => $request->phone,'appointment_date' => $dateOnly,'appointment_time' => $timeOnly,'meeting_place' => $request->meeting_place,'message' => $request->message,'want_appointment' => true]); }
+        /* |-------------------------------------------------------------------------- | 10. RESPUESTA PARA CONSULTA |-------------------------------------------------------------------------- */ return redirect()->back()->with('success', 'Tu mensaje ha sido enviado con éxito, pronto un asesor se contactará contigo.');
+    });
+}
 
     public function confirmAppointment(Request $request)
     {

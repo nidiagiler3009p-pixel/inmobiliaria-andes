@@ -43,12 +43,29 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-[2px] items-start"> 
         
         <!-- COLUMNA IZQUIERDA: DETALLES DE LA PROPIEDAD -->
-        <div class="lg:col-span-4 lg:max-w-[370px] ml-auto bg-[#FDFBF7] p-2 rounded-3xl border border-emerald-200/80 shadow-sm">
-            <x-property-details :property="$property" :showContact="true" />
-        </div>
+<div class="lg:col-span-4 w-full">
+
+    <div class="
+        property-sidebar-scroll
+        space-y-2
+        lg:max-h-[calc(100vh-190px)]
+        lg:overflow-y-auto
+        lg:overflow-x-hidden
+        lg:pr-3
+    ">
+
+        <x-property-details
+            :property="$property"
+            :showContact="true"
+        />
+
+    </div>
+
+</div>
+
 
         <!-- COLUMNA DERECHA: GALERÍA DE IMÁGENES DE ALTA VISIBILIDAD -->
-        <div class="lg:col-span-8 space-y-3">
+        <div class="lg:col-span-8 w-full lg:sticky lg:top-4">
             <div class="bg-white p-3 rounded-3xl border border-emerald-100 shadow-sm space-y-3">
                <!-- GALERÍA PRINCIPAL -->
 <div class="relative w-full bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-emerald-100 shadow-inner group">
@@ -110,4 +127,33 @@
 
     </div>
 </div>
+<style>
+    @media (min-width: 1024px) {
+
+        .property-sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #10b981 #f1f5f9;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar {
+            width: 7px;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 20px;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #10b981;
+            border-radius: 20px;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: #047857;
+        }
+
+    }
+</style>
+
 @endsection

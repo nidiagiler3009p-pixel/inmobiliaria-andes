@@ -5,18 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Contact extends Model
+class ProspectAlias extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'prospect_id',
-        'name',
-        'last_name',
-        'phone',
-        'general_address',
-        'requirements_message',
-        'status',
+        'alias_name',
+        'notes',
     ];
 
     public function prospect()

@@ -66,7 +66,7 @@ Route::post('/citas/confirmar', [PublicPropertyController::class, 'confirmAppoin
 // 2. INTRANET / PANEL DE ADMINISTRACIÓN (REQUIEREN AUTH)
 // ==========================================
 Route::middleware(['auth'])->group(function () {
-    
+
     // Cierre de sesión
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -101,16 +101,28 @@ Route::middleware(['auth'])->group(function () {
     // Agenda personal del usuario
     Route::get('/admin/agenda', [AppointmentController::class, 'index'])->name('admin.agenda');
     Route::post('/admin/agenda', [AppointmentController::class, 'storeManual'])->name('admin.agenda.store');
-    
+
     // Vistas Principales de Gestión
     Route::get('/admin/gestion-citas', [AppointmentController::class, 'gestionCitas'])->name('gestion.citas');
-    Route::get('/admin/citas-integrales', [AppointmentController::class, 'integrales'])->name('admin.citas-totales'); 
-    
+    Route::get('/admin/citas-integrales', [AppointmentController::class, 'integrales'])->name('admin.citas-totales');
+
     // Guardar Citas Manuales vs Registros Integrales
     Route::get('/admin/citas/crear', [AppointmentController::class, 'create'])->name('admin.citas.create');
     Route::post('/admin/gestion-citas', [AppointmentController::class, 'storeManual'])->name('gestion.citas.store');
     Route::post('/admin/citas-integrales', [AppointmentController::class, 'storeIntegral'])->name('admin.citas.storeIntegral');
     Route::post('/admin/integrales/store', [AppointmentController::class, 'storeIntegral'])->name('admin.integrales.store');
+    //cartera
+
+    Route::post('/intranet/integrales/{tipo}/{id}/cartera',[AppointmentController::class, 'moveIntegralToPortfolio'])->where('tipo', 'contact|advisory|tramite')->whereNumber('id')->name('admin.integrales.cartera');
+   //historial
+   Route::get('/intranet/prospectos/{id}/historial',[AppointmentController::class, 'historialProspecto'])->whereNumber('id')->name('admin.prospectos.historial');
+   Route::put('/intranet/prospectos/{id}/perfil', [AppointmentController::class, 'updateProspectProfile'])->whereNumber('id')->name('admin.prospectos.perfil.update');
+    Route::post('/intranet/prospectos/{id}/movimientos', [AppointmentController::class, 'storeProspectMovement'])->whereNumber('id')->name('admin.prospectos.movimientos.store');
+// ==========================================
+// CARTERA DE PROSPECTOS
+// ==========================================
+Route::get( '/intranet/cartera', [AppointmentController::class, 'cartera'])->name('admin.cartera');
+
 
     // Acciones sobre Citas e Integrales (Permitir IDs alfanuméricos como advisory_18, contact_5, etc.)
     Route::get('/admin/citas/{id}/edit', [AppointmentController::class, 'edit'])
@@ -132,7 +144,7 @@ Route::middleware(['auth'])->group(function () {
     Route::match(['put', 'patch'], '/intranet/citas/{id}/estado', [AppointmentController::class, 'cambiarEstado'])
         ->where('id', '[A-Za-z0-9_]+')
         ->name('citas.estado');
-    
+
     // Eliminación (Reciclaje / Soft Delete)
     Route::delete('/admin/citas/{id}', [AppointmentController::class, 'destroyIntegral'])
         ->where('id', '[A-Za-z0-9_]+')
@@ -141,7 +153,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/admin/integrales/{id}', [AppointmentController::class, 'destroyIntegral'])
         ->where('id', '[A-Za-z0-9_]+')
         ->name('admin.integrales.destroy');
-    
+
     // Papelera, Restauración y Eliminación Definitiva
     Route::patch('/admin/citas/{id}/restaurar', [AppointmentController::class, 'restaurar'])
         ->where('id', '[A-Za-z0-9_]+')
@@ -150,7 +162,7 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/admin/integrales/{id}/restaurar', [AppointmentController::class, 'restaurar'])
         ->where('id', '[A-Za-z0-9_]+')
         ->name('admin.integrales.restaurar');
-    
+
     Route::delete('/admin/citas/{id}/forzar-eliminar', [AppointmentController::class, 'forzarEliminar'])
         ->where('id', '[A-Za-z0-9_]+')
         ->name('admin.citas.forzar-eliminar');
@@ -159,8 +171,11 @@ Route::middleware(['auth'])->group(function () {
         ->where('id', '[A-Za-z0-9_]+')
         ->name('admin.integrales.forzarEliminar');
 
-    // ------------------------------------------
-    // MÓDULO DE CONTABILIDAD
+    // Pasar una cita a Cartera
+Route::post( '/intranet/citas/{id}/cartera', [AppointmentController::class, 'moveToPortfolio'])->whereNumber('id')->name('gestion.citas.cartera');
+Route::post('/intranet/cartera/{prospect}/convertir-cliente', [AppointmentController::class, 'convertProspectToClient'])->whereNumber('prospect')->name('admin.cartera.convertir-cliente');    // ------------------------------------------
+Route::patch('/intranet/clients/{client}/confirmar-revision', [ClientController::class, 'confirmReview'])->name('clients.confirm-review');
+// MÓDULO DE CONTABILIDAD
     // ------------------------------------------
     // Redirección de seguridad si intentan entrar por GET a los métodos POST de contabilidad
     Route::get('/intranet/accounting/expense', function () { return redirect()->route('accounting.index'); });

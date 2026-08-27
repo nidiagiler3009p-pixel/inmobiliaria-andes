@@ -103,4 +103,9 @@ class Property extends Model
     {
         return $this->hasMany(AppointmentTracking::class);
     }
+
+    public function portfolioEntries()
+{
+    return $this->hasMany(ClientPortfolioEntry::class);
+}
 }

@@ -5,18 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Contact extends Model
+class ProspectContact extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'prospect_id',
-        'name',
-        'last_name',
-        'phone',
-        'general_address',
-        'requirements_message',
-        'status',
+        'type',
+        'value',
+        'label',
+        'is_primary',
+        'notes',
+    ];
+
+    protected $casts = [
+        'is_primary' => 'boolean',
     ];
 
     public function prospect()

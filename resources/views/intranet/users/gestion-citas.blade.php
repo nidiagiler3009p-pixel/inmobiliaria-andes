@@ -150,19 +150,36 @@
 
                             <td class="p-2.5">
                                 {{ $appointment->user ? $appointment->user->name . ' ' . ($appointment->user->last_name ?? '') : 'Sin Asesor' }}
-                            </td>
+<td class="p-2.5 font-medium">
 
-                            <td class="p-2.5 font-medium">
-                                @if($appointment->client)
-                                    {{ $appointment->client->first_name ?? $appointment->client->name ?? '' }} {{ $appointment->client->last_name ?? '' }}
-                                @else
-                                    <span class="text-gray-500 italic">Sin Cliente</span>
-                                @endif
-                            </td>
+    @php
+        $persona = $appointment->prospect ?? $appointment->client;
+    @endphp
 
-                            <td class="p-2.5">
-                                {{ $appointment->client->phone ?? $appointment->phone ?? 'N/A' }}
-                            </td>
+    @if($persona)
+
+        {{ $persona->first_name ?? $persona->name ?? '' }}
+        {{ $persona->last_name ?? '' }}
+
+    @else
+
+        <span class="text-gray-500 italic">
+            Sin Cliente
+        </span>
+
+    @endif
+
+</td>
+
+<td class="p-2.5">
+
+    {{ $appointment->prospect->phone
+        ?? $appointment->client->phone
+        ?? $appointment->phone
+        ?? 'N/A'
+    }}
+
+</td>
 
                             <td class="p-2.5">
                                 <span class="bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">
@@ -248,16 +265,90 @@
                                     title="Modificar Datos">
                                     <i class="fa-solid fa-pen text-xs"></i>
                                 </button>
-                                
-                                <!-- CONDICIÓN DE BORRADO: Solo visible para el rol SYSTEMS -->
-                                @if(auth()->user()->role === 'SYSTEMS' || (method_exists(auth()->user(), 'hasRole') && auth()->user()->hasRole('SYSTEMS')))
-                                    <form action="{{ route('gestion.citas.destroy', $appointment->id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de eliminar esta cita?');" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow transition" title="Eliminar Cita">
-                                            <i class="fa-solid fa-trash text-xs"></i>
-                                        </button>
-                                    </form>
+                                {{-- PASAR A CARTERA --}}
+@if($appointment->client_id || $appointment->prospect_id)
+
+    @if($appointment->portfolioEntry)
+
+        {{-- YA ESTÁ EN CARTERA --}}
+        <button
+            type="button"
+            disabled
+            class="bg-emerald-100 text-emerald-700 border border-emerald-300 p-1.5 rounded-lg cursor-not-allowed"
+            title="Este cliente ya fue enviado a Cartera"
+        >
+            <i class="fa-solid fa-check text-xs"></i>
+        </button>
+
+    @else
+
+        {{-- ENVIAR A CARTERA --}}
+        <button
+            type="button"
+            onclick="openPortfolioModal(this)"
+            data-appointment-id="{{ $appointment->id }}"
+            data-client-id="{{ $appointment->client_id }}"
+            data-client-name="{{
+    trim(
+        (
+            $appointment->prospect->first_name
+            ?? $appointment->prospect->name
+            ?? $appointment->client->first_name
+            ?? $appointment->client->name
+            ?? ''
+        )
+        . ' ' .
+        (
+            $appointment->prospect->last_name
+            ?? $appointment->client->last_name
+            ?? ''
+        )
+    )
+}}"
+            data-property-name="{{ $appointment->property->title ?? 'Sin propiedad específica' }}"
+            data-advisor-name="{{ trim(($appointment->user->name ?? '') . ' ' . ($appointment->user->last_name ?? '')) }}"
+            data-channel="{{ $appointment->source_channel ?? $appointment->channel ?? '' }}"
+            class="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-lg shadow transition"
+            title="Pasar a Cartera"
+        >
+            <i class="fa-solid fa-folder-plus text-xs"></i>
+        </button>
+
+    @endif
+
+@else
+
+    {{-- SIN CLIENTE ASOCIADO --}}
+    <button
+        type="button"
+        disabled
+        class="bg-gray-200 text-gray-400 p-1.5 rounded-lg cursor-not-allowed"
+        title="La cita no tiene un cliente registrado"
+    >
+        <i class="fa-solid fa-folder-plus text-xs"></i>
+    </button>
+
+@endif
+                                <!-- CONDICIÓN DE BORRADO: Solo visible para el rol AMINISTRADOR/GERENTE -->
+                                @if(auth()->user()->role === 'Administrador/Gerente' || (method_exists(auth()->user(), 'hasRole') && auth()->user()->hasRole('Administrador/Gerente')))
+<form
+    id="delete-form-{{ $appointment->id }}"
+    action="{{ route('gestion.citas.destroy', $appointment->id) }}"
+    method="POST"
+    class="inline"
+>
+    @csrf
+    @method('DELETE')
+
+    <button
+        type="button"
+        onclick="openDeleteModal('{{ $appointment->id }}')"
+        class="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow transition"
+        title="Eliminar Cita"
+    >
+        <i class="fa-solid fa-trash text-xs"></i>
+    </button>
+</form>
                                 @endif
                             </td>
                         </tr>
@@ -472,121 +563,817 @@
         </form>
     </div>
 </div>
+{{-- MODAL PASAR A CARTERA --}}
+<div
+    id="portfolio-modal"
+    class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+>
+    <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+
+        {{-- CABECERA --}}
+        <div class="bg-blue-700 text-white px-6 py-4 flex justify-between items-center">
+
+            <h3 class="font-bold text-base">
+                <i class="fa-solid fa-folder-plus mr-2"></i>
+                Pasar a Cartera
+            </h3>
+
+            <button
+                type="button"
+                onclick="closeModal('portfolio-modal')"
+                class="text-white hover:text-gray-200 text-lg"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+
+        <form
+            id="portfolio-form"
+            method="POST"
+            action=""
+            class="p-5 space-y-4 text-xs"
+        >
+            @csrf
+
+            {{-- INFORMACIÓN AUTOMÁTICA --}}
+            <div class="bg-white border border-[#D8D3C8] rounded-xl p-3 space-y-2">
+
+                <div>
+                    <span class="text-[10px] text-gray-500 font-bold uppercase">
+                        Cliente
+                    </span>
+
+                    <p id="portfolio-client-name" class="font-bold text-[#1E392A]">
+                        -
+                    </p>
+                </div>
+
+                <div>
+                    <span class="text-[10px] text-gray-500 font-bold uppercase">
+                        Propiedad de interés
+                    </span>
+
+                    <p id="portfolio-property-name" class="font-semibold text-[#2C5E43]">
+                        -
+                    </p>
+                </div>
+
+                <div>
+                    <span class="text-[10px] text-gray-500 font-bold uppercase">
+                        Asesor
+                    </span>
+
+                    <p id="portfolio-advisor-name" class="font-semibold">
+                        -
+                    </p>
+                </div>
+
+            </div>
+
+
+            {{-- MOTIVO --}}
+            <div>
+                <label class="font-semibold text-[#1E392A] block mb-1">
+                    Motivo de ingreso a Cartera *
+                </label>
+
+                <textarea
+                    name="entry_reason"
+                    id="portfolio-reason"
+                    rows="3"
+                    required
+                    placeholder="Ej. Cliente interesado, pero requiere seguimiento y nuevas opciones..."
+                    class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"
+                ></textarea>
+            </div>
+
+
+            {{-- CANAL --}}
+            <div>
+                <label class="font-semibold text-[#1E392A] block mb-1">
+                    Canal de contacto
+                </label>
+
+                <select
+                    name="contact_channel"
+                    id="portfolio-channel"
+                    onchange="togglePortfolioSocialFields()"
+                    class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"
+                >
+                    <option value="">Seleccione...</option>
+                    <option value="Sitio Web">Sitio Web</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="Teléfono">Teléfono</option>
+                    <option value="Correo">Correo</option>
+                    <option value="Referido">Referido</option>
+                    <option value="Presencial">Presencial</option>
+                    <option value="Otro">Otro</option>
+                </select>
+            </div>
+
+
+            {{-- DATOS RED SOCIAL --}}
+            <div
+                id="portfolio-social-fields"
+                class="hidden bg-white border border-blue-200 rounded-xl p-3 space-y-3"
+            >
+
+                <div>
+                    <label class="font-semibold text-[#1E392A] block mb-1">
+                        Red Social
+                    </label>
+
+                    <select
+                        name="social_platform"
+                        id="portfolio-social-platform"
+                        class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"
+                    >
+                        <option value="">Seleccione...</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Otra">Otra</option>
+                    </select>
+                </div>
+
+
+                <div>
+                    <label class="font-semibold text-[#1E392A] block mb-1">
+                        Link del perfil / cuenta
+                    </label>
+
+                    <input
+                        type="url"
+                        name="social_profile_url"
+                        id="portfolio-social-url"
+                        placeholder="https://instagram.com/usuario"
+                        class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"
+                    >
+                </div>
+
+            </div>
+
+
+            {{-- ESTADO INICIAL --}}
+            <div>
+                <label class="font-semibold text-[#1E392A] block mb-1">
+                    Estado inicial en Cartera *
+                </label>
+
+                <select
+                    name="portfolio_status"
+                    id="portfolio-status"
+                    required
+                    class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"
+                >
+                    <option value="Nuevo">Nuevo</option>
+                    <option value="Contactado">Contactado</option>
+                    <option value="Seguimiento">Seguimiento</option>
+                    <option value="Interesado">Interesado</option>
+                    <option value="Negociación">Negociación</option>
+                </select>
+            </div>
+
+
+            {{-- NOTAS --}}
+            <div>
+                <label class="font-semibold text-[#1E392A] block mb-1">
+                    Observaciones adicionales
+                </label>
+
+                <textarea
+                    name="notes"
+                    id="portfolio-notes"
+                    rows="2"
+                    placeholder="Información adicional para el seguimiento..."
+                    class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2"
+                ></textarea>
+            </div>
+
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-[#D8D3C8]">
+
+                <button
+                    type="button"
+                    onclick="closeModal('portfolio-modal')"
+                    class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-4 py-2 rounded-lg font-medium transition"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2 rounded-lg font-medium shadow transition"
+                >
+                    <i class="fa-solid fa-folder-plus mr-1"></i>
+                    Pasar a Cartera
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+</div>
+{{-- MODAL CONFIRMAR ELIMINACIÓN --}}
+<div
+    id="delete-modal"
+    class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+>
+
+    <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+
+        {{-- ENCABEZADO --}}
+        <div class="bg-red-700 text-white px-6 py-4 flex items-center justify-between">
+
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                Eliminar registro
+            </h3>
+
+            <button
+                type="button"
+                onclick="closeDeleteModal()"
+                class="text-white hover:text-red-100 text-lg"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+
+        {{-- CONTENIDO --}}
+        <div class="p-6 text-center">
+
+            <div class="w-14 h-14 mx-auto mb-4 bg-red-100 text-red-700 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-trash-can text-xl"></i>
+            </div>
+
+            <h4 class="font-bold text-[#1E392A] text-lg mb-2">
+                ¿Desea eliminar esta cita?
+            </h4>
+
+            <p class="text-sm text-gray-600 leading-relaxed">
+                Esta acción eliminará el registro permanentemente.
+            </p>
+
+            <p class="text-xs text-red-600 font-semibold mt-2">
+                Esta acción no se puede deshacer.
+            </p>
+
+        </div>
+
+
+        {{-- BOTONES --}}
+        <div class="px-6 pb-6 flex justify-center gap-3">
+
+            <button
+                type="button"
+                onclick="closeDeleteModal()"
+                class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-5 py-2 rounded-lg font-semibold transition"
+            >
+                <i class="fa-solid fa-xmark mr-1"></i>
+                No, regresar
+            </button>
+
+            <button
+                type="button"
+                onclick="confirmDeleteAppointment()"
+                class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold shadow transition"
+            >
+                <i class="fa-solid fa-trash mr-1"></i>
+                Sí, eliminar
+            </button>
+
+        </div>
+
+    </div>
+</div>
 
 <script>
-    let isNewClientMode = false;
 
-    function toggleClientMode() {
-        const existingContainer = document.getElementById('existing-client-container');
-        const newContainer = document.getElementById('new-client-container');
-        const toggleText = document.getElementById('toggle-client-text');
-        
-        isNewClientMode = !isNewClientMode;
+console.log('SCRIPT DE CITAS CARGADO CORRECTAMENTE');
 
-        if (isNewClientMode) {
-            newContainer.classList.remove('hidden');
-            existingContainer.classList.add('hidden');
-            toggleText.textContent = '← Volver a seleccionar cliente existente';
-            document.getElementById('field-client-id').value = ''; 
-        } else {
-            newContainer.classList.add('hidden');
-            existingContainer.classList.remove('hidden');
-            toggleText.textContent = 'Registrar nuevo cliente en lugar de seleccionar';
-            
-            document.getElementById('field-new-name').value = '';
-            document.getElementById('field-new-lastname').value = '';
-            document.getElementById('field-new-phone').value = '';
-            document.getElementById('field-new-email').value = '';
+let isNewClientMode = false;
+
+
+/* =========================================================
+   CLIENTE EXISTENTE / CLIENTE NUEVO
+========================================================= */
+
+function toggleClientMode() {
+
+    const existingContainer =
+        document.getElementById('existing-client-container');
+
+    const newContainer =
+        document.getElementById('new-client-container');
+
+    const toggleText =
+        document.getElementById('toggle-client-text');
+
+    if (!existingContainer || !newContainer || !toggleText) {
+        console.error('No se encontraron los campos de cliente.');
+        return;
+    }
+
+    isNewClientMode = !isNewClientMode;
+
+    if (isNewClientMode) {
+
+        newContainer.classList.remove('hidden');
+        existingContainer.classList.add('hidden');
+
+        toggleText.textContent =
+            '← Volver a seleccionar cliente existente';
+
+        document.getElementById('field-client-id').value = '';
+
+    } else {
+
+        newContainer.classList.add('hidden');
+        existingContainer.classList.remove('hidden');
+
+        toggleText.textContent =
+            'Registrar nuevo cliente en lugar de seleccionar';
+
+        document.getElementById('field-new-name').value = '';
+        document.getElementById('field-new-lastname').value = '';
+        document.getElementById('field-new-phone').value = '';
+        document.getElementById('field-new-email').value = '';
+    }
+}
+
+
+/* =========================================================
+   CREAR CITA
+========================================================= */
+
+function openCreateModal() {
+
+    console.log('Abriendo modal crear cita');
+
+    const modal =
+        document.getElementById('appointment-modal');
+
+    const form =
+        document.getElementById('appointment-form');
+
+    const title =
+        document.getElementById('modal-title');
+
+    const methodField =
+        document.getElementById('method-field');
+
+    if (!modal || !form || !title || !methodField) {
+        console.error('No se encontró el modal de citas.');
+        return;
+    }
+
+    if (isNewClientMode) {
+        toggleClientMode();
+    }
+
+    form.reset();
+
+    title.innerHTML =
+        '<i class="fa-solid fa-calendar-plus mr-2"></i> Ingresar Nueva Cita Manual';
+
+    form.action = "{{ route('gestion.citas.store') }}";
+
+    methodField.innerHTML = '';
+
+    const defaultUser = "{{ auth()->id() }}";
+
+    if (defaultUser) {
+
+        const userField =
+            document.getElementById('field-user');
+
+        if (userField) {
+            userField.value = defaultUser;
         }
     }
 
-    function openCreateModal() {
-        const modal = document.getElementById('appointment-modal');
-        const form = document.getElementById('appointment-form');
-        const title = document.getElementById('modal-title');
-        const methodField = document.getElementById('method-field');
+    modal.classList.remove('hidden');
+}
 
+
+/* =========================================================
+   EDITAR CITA
+========================================================= */
+
+function openEditModal(button) {
+
+    console.log('Abriendo modal editar cita');
+
+    const rawData =
+        button.getAttribute('data-appointment');
+
+    let data;
+
+    try {
+
+        data = JSON.parse(rawData);
+
+    } catch (error) {
+
+        console.error(
+            'Error al leer los datos de la cita:',
+            error,
+            rawData
+        );
+
+        return;
+    }
+
+    const modal =
+        document.getElementById('appointment-modal');
+
+    const form =
+        document.getElementById('appointment-form');
+
+    const title =
+        document.getElementById('modal-title');
+
+    const methodField =
+        document.getElementById('method-field');
+
+
+    if (isNewClientMode) {
+        toggleClientMode();
+    }
+
+
+    title.innerHTML =
+        '<i class="fa-solid fa-user-pen mr-2"></i> Modificar Cita #' + data.id;
+
+   form.action = "{{ url('/admin/citas') }}/" + data.id;
+
+    methodField.innerHTML =
+        '<input type="hidden" name="_method" value="PUT">';
+
+
+    document.getElementById('field-client-id').value =
+        data.client_id || '';
+
+    /*
+     * CORREGIDO:
+     * antes decía field-[#field-user]
+     */
+    document.getElementById('field-user').value =
+        data.user_id || '';
+
+    document.getElementById('field-property').value =
+        data.property_id || '';
+
+    document.getElementById('field-source-channel').value =
+        data.source_channel || data.channel || '';
+
+    document.getElementById('field-location').value =
+        data.location_reference || '';
+
+
+    if (data.appointment_date) {
+
+        document.getElementById('field-date').value =
+            data.appointment_date
+                .replace(' ', 'T')
+                .substring(0, 16);
+
+    } else {
+
+        document.getElementById('field-date').value = '';
+    }
+
+
+    document.getElementById('field-type').value =
+        data.type || 'visita';
+
+    document.getElementById('field-priority').value =
+        data.priority || 'normal';
+
+    document.getElementById('field-status').value =
+        data.status || 'Pendiente';
+
+    document.getElementById('field-notes').value =
+        data.notes || '';
+
+    modal.classList.remove('hidden');
+}
+
+
+/* =========================================================
+   CAMBIAR ESTADO
+========================================================= */
+
+function openStatusModal(
+    id,
+    currentStatus,
+    reason = '',
+    rescued = false
+) {
+
+    console.log('Abriendo estado de cita:', id);
+
+    const modal =
+        document.getElementById('status-modal');
+
+    const form =
+        document.getElementById('status-form');
+
+    if (!modal || !form) {
+
+        console.error(
+            'No se encontró el modal de estado.'
+        );
+
+        return;
+    }
+
+    form.action = "{{ url('/intranet/citas') }}/" + id + "/estado";
+
+    document.getElementById('status-select').value =
+        currentStatus;
+
+    document.getElementById('status-reason').value =
+        reason;
+
+    document.getElementById('status-rescue').checked =
+        rescued;
+
+    toggleCancellationFields();
+
+    modal.classList.remove('hidden');
+}
+
+
+function toggleCancellationFields() {
+
+    const statusSelect =
+        document.getElementById('status-select');
+
+    const cancellationFields =
+        document.getElementById('cancellation-fields');
+
+    const reasonInput =
+        document.getElementById('status-reason');
+
+    if (!statusSelect || !cancellationFields || !reasonInput) {
+        return;
+    }
+
+    if (statusSelect.value === 'Cancelado') {
+
+        cancellationFields.classList.remove('hidden');
+
+        reasonInput.setAttribute(
+            'required',
+            'required'
+        );
+
+    } else {
+
+        cancellationFields.classList.add('hidden');
+
+        reasonInput.removeAttribute('required');
+    }
+}
+
+
+/* =========================================================
+   PASAR A CARTERA
+========================================================= */
+
+function openPortfolioModal(button) {
+
+    console.log('Abriendo modal cartera');
+
+    const appointmentId =
+        button.dataset.appointmentId;
+
+    const clientName =
+        button.dataset.clientName || 'Cliente';
+
+    const propertyName =
+        button.dataset.propertyName ||
+        'Sin propiedad específica';
+
+    const advisorName =
+        button.dataset.advisorName ||
+        'Sin asesor';
+
+    const channel =
+        button.dataset.channel || '';
+
+
+    const modal =
+        document.getElementById('portfolio-modal');
+
+    const form =
+        document.getElementById('portfolio-form');
+
+
+    if (!modal || !form) {
+
+        console.error(
+            'No se encontró el modal de cartera.'
+        );
+
+        return;
+    }
+
+
+    form.action =
+        '/intranet/citas/' +
+        appointmentId +
+        '/cartera';
+
+
+    document.getElementById(
+        'portfolio-client-name'
+    ).textContent = clientName;
+
+
+    document.getElementById(
+        'portfolio-property-name'
+    ).textContent = propertyName;
+
+
+    document.getElementById(
+        'portfolio-advisor-name'
+    ).textContent = advisorName;
+
+
+    document.getElementById(
+        'portfolio-reason'
+    ).value = '';
+
+
+    document.getElementById(
+        'portfolio-notes'
+    ).value = '';
+
+
+    document.getElementById(
+        'portfolio-status'
+    ).value = 'Nuevo';
+
+
+    const channelSelect =
+        document.getElementById(
+            'portfolio-channel'
+        );
+
+
+    const availableValues =
+        Array.from(channelSelect.options)
+            .map(option => option.value);
+
+
+    if (availableValues.includes(channel)) {
+
+        channelSelect.value = channel;
+
+    } else {
+
+        channelSelect.value = '';
+    }
+
+
+    document.getElementById(
+        'portfolio-social-platform'
+    ).value = '';
+
+
+    document.getElementById(
+        'portfolio-social-url'
+    ).value = '';
+
+
+    togglePortfolioSocialFields();
+
+    modal.classList.remove('hidden');
+}
+
+
+function togglePortfolioSocialFields() {
+
+    const channel =
+        document.getElementById(
+            'portfolio-channel'
+        ).value;
+
+    const socialFields =
+        document.getElementById(
+            'portfolio-social-fields'
+        );
+
+    const platform =
+        document.getElementById(
+            'portfolio-social-platform'
+        );
+
+    const profileUrl =
+        document.getElementById(
+            'portfolio-social-url'
+        );
+
+
+    const socialNetworks = [
+        'Facebook',
+        'Instagram',
+        'TikTok'
+    ];
+
+
+    if (socialNetworks.includes(channel)) {
+
+        socialFields.classList.remove('hidden');
+
+        platform.value = channel;
+
+    } else {
+
+        socialFields.classList.add('hidden');
+
+        platform.value = '';
+
+        profileUrl.value = '';
+    }
+}
+let deleteAppointmentId = null;
+
+
+function openDeleteModal(id) {
+
+    deleteAppointmentId = id;
+
+    const modal = document.getElementById('delete-modal');
+
+    if (modal) {
         modal.classList.remove('hidden');
+    }
+}
 
-        if (isNewClientMode) {
-            toggleClientMode();
-        }
 
-        title.innerHTML = '<i class="fa-solid fa-calendar-plus mr-2"></i> Ingresar Nueva Cita Manual';
-        form.action = "{{ route('gestion.citas.store') }}";
-        methodField.innerHTML = '';
-        form.reset();
-        
-        const defaultUser = "{{ auth()->id() }}";
-        if (defaultUser) {
-            document.getElementById('field-user').value = defaultUser;
-        }
+function closeDeleteModal() {
+
+    const modal = document.getElementById('delete-modal');
+
+    if (modal) {
+        modal.classList.add('hidden');
     }
 
-    function openEditModal(button) {
-        const data = JSON.parse(button.getAttribute('data-appointment'));
-        const modal = document.getElementById('appointment-modal');
-        const form = document.getElementById('appointment-form');
-        const title = document.getElementById('modal-title');
-        const methodField = document.getElementById('method-field');
+    deleteAppointmentId = null;
+}
 
-        modal.classList.remove('hidden');
 
-        if (isNewClientMode) {
-            toggleClientMode();
-        }
+function confirmDeleteAppointment() {
 
-        title.innerHTML = '<i class="fa-solid fa-user-pen mr-2"></i> Modificar Cita #' + data.id;
-        form.action = "/intranet/citas/" + data.id; 
-        methodField.innerHTML = '<input type="hidden" name="_method" value="PUT">';
-
-        document.getElementById('field-client-id').value = data.client_id || '';
-        document.getElementById('field-[#field-user]').value = data.user_id || '';
-        document.getElementById('field-property').value = data.property_id || '';
-        document.getElementById('field-source-channel').value = data.source_channel || data.channel || '';
-        document.getElementById('field-location').value = data.location_reference || '';
-        
-        if (data.appointment_date) {
-            document.getElementById('field-date').value = data.appointment_date.replace(' ', 'T').substring(0, 16);
-        } else {
-            document.getElementById('field-date').value = '';
-        }
-
-        document.getElementById('field-type').value = data.type || 'visita';
-        document.getElementById('field-priority').value = data.priority || 'normal';
-        document.getElementById('field-status').value = data.status || 'Pendiente';
-        document.getElementById('field-notes').value = data.notes || '';
+    if (!deleteAppointmentId) {
+        console.error('No se encontró el ID de la cita.');
+        return;
     }
 
-    function openStatusModal(id, currentStatus, reason = '', rescued = false) {
-        const modal = document.getElementById('status-modal');
-        const form = document.getElementById('status-form');
+    const form = document.getElementById(
+        'delete-form-' + deleteAppointmentId
+    );
 
-        form.action = '/intranet/citas/' + id + '/status';
-        document.getElementById('status-select').value = currentStatus;
-        document.getElementById('status-reason').value = reason;
-        document.getElementById('status-rescue').checked = rescued;
-
-        toggleCancellationFields();
-        modal.classList.remove('hidden');
+    if (!form) {
+        console.error('No se encontró el formulario de eliminación.');
+        return;
     }
 
-    function toggleCancellationFields() {
-        const statusSelect = document.getElementById('status-select');
-        const cancellationFields = document.getElementById('cancellation-fields');
-        const reasonInput = document.getElementById('status-reason');
+    form.submit();
+}
 
-        if (statusSelect.value === 'Cancelado') {
-            cancellationFields.classList.remove('hidden');
-            reasonInput.setAttribute('required', 'required');
-        } else {
-            cancellationFields.classList.add('hidden');
-            reasonInput.removeAttribute('required');
-        }
-    }
+/* =========================================================
+   CERRAR MODALES
+========================================================= */
 
-    function closeModal(modalId) {
-        document.getElementById(modalId).classList.add('hidden');
+function closeModal(modalId) {
+
+    const modal =
+        document.getElementById(modalId);
+
+    if (modal) {
+
+        modal.classList.add('hidden');
+
+    } else {
+
+        console.error(
+            'No existe el modal:',
+            modalId
+        );
     }
+}
+
 </script>
 @endsection

@@ -45,24 +45,77 @@ class ClientController extends Controller
     // Mostrar los detalles o perfil de un cliente específico
     public function show(Client $client)
     {
-        $client->load('appointmentTrackings', 'schedules', 'user');
+        $client->load(
+    'appointmentTrackings',
+    'schedules',
+    'user',
+    'prospect'
+);
         return view('intranet.clients.show', compact('client'));
     }
 
     // Actualizar la información del cliente
-    public function update(Request $request, Client $client)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'status' => 'required|string',
-        ]);
+public function update(Request $request, Client $client)
+{
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'last_name' => 'required|string|max:255',
 
-        $client->update($request->all());
+        'identification_card' =>
+            'nullable|string|max:100',
 
-        return redirect()->route('clients.index')->with('success', '¡Datos del cliente actualizados correctamente!');
-    }
+        'phone' =>
+            'required|string|max:20',
+
+        'email' =>
+            'nullable|email|max:255',
+
+        'status' =>
+            'required|in:Confirmada,Interesado,En Proceso,Cerrado Exitoso,Seguimiento Pendiente,Negociación,Vendida',
+
+        'social_media_source' =>
+            'nullable|string|max:255',
+
+        'observations' =>
+            'nullable|string|max:3000',
+    ]);
+
+    $client->update([
+        'name' =>
+            $request->name,
+
+        'last_name' =>
+            $request->last_name,
+
+        'identification_card' =>
+            $request->identification_card,
+
+        'phone' =>
+            $request->phone,
+
+        'email' =>
+            $request->email,
+
+        'status' =>
+            $request->status,
+
+        'social_media_source' =>
+            $request->social_media_source,
+
+        'observations' =>
+            $request->observations,
+    ]);
+
+    return redirect()
+        ->route(
+            'clients.show',
+            $client->id
+        )
+        ->with(
+            'success',
+            'Datos del cliente actualizados correctamente.'
+        );
+}
 
     // Eliminar un cliente de la base de datos
     public function destroy(Client $client)
@@ -70,6 +123,20 @@ class ClientController extends Controller
         $client->delete();
         return redirect()->route('clients.index')->with('success', 'Cliente eliminado de la base de datos.');
     }
+
+public function edit(Client $client)
+{
+    return view(
+        'intranet.clients.edit',
+        compact('client')
+    );
+}
+    public function confirmReview(Client $client) {
+    if ($client->review_status === 'Confirmado') return redirect()->route('clients.show', $client->id)->with('success', 'Este cliente ya se encuentra confirmado.');
+    $client->review_status = 'Confirmado';
+    $client->save();
+    return redirect()->route('clients.show', $client->id)->with('success', 'Cliente confirmado correctamente y listo para pasar a Clientes / Trámites.');
+}
 
     // Procesar el formulario público del catálogo, registrar el cliente, la cita y heredar el asesor de la propiedad
     public function sendMessageAndCreateAppointment(Request $request)

@@ -33,7 +33,7 @@
     $hasSpecial = collect($specialFeatures)->keys()->contains(fn($k) => !empty($property->$k));
 @endphp
 
-<div class="space-y-2 text-gray-800 text-[10px]"> 
+<div class="space-y-2 text-gray-800 text-[10px]">
 
     {{-- ALERTA DE ÉXITO --}}
     @if (session('success'))
@@ -50,7 +50,7 @@
 
     {{-- TÍTULO CENTRADO Y COMPACTO --}}
 <div class="text-center py-1 px-2">
-    <div class="text-[14px] font-black text-gray-900 leading-tight">
+    <div class="text-[20px] font-black text-gray-900 leading-tight">
         {{ $property->title ?? 'Propiedad Sin Título' }}
     </div>
 </div>
@@ -92,7 +92,7 @@
         {{-- ENCABEZADO --}}
         <div class="flex items-center justify-between gap-2 border-b border-gray-100 pb-1.5">
 
-<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+<div class="font-black text-[12px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
     <i class="fa-solid fa-location-dot text-emerald-600"></i>
     Ubicación
 </div>
@@ -104,7 +104,7 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Ver ubicación en Google Maps"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[9px] font-black transition"
+                    class="inline-flex items-center gap-1.5 px-4 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-black transition"
                 >
                     <i class="fa-solid fa-map-location-dot text-emerald-600"></i>
                     Ver mapa
@@ -123,9 +123,9 @@
                     </span>
 
                     <div class="flex items-start gap-1.5">
-                        <i class="fa-solid fa-city text-emerald-600 text-[10px] mt-0.5"></i>
+                        <i class="fa-solid fa-city text-emerald-600 text-[12px] mt-0.5"></i>
 
-                        <strong class="text-[10px] text-gray-800 leading-tight">
+                        <strong class="text-[15px] text-gray-800 leading-tight">
                             {{ $property->location }}
                         </strong>
                     </div>
@@ -141,7 +141,7 @@
                     <div class="flex items-start gap-1.5">
                         <i class="fa-solid fa-road text-emerald-600 text-[10px] mt-0.5"></i>
 
-                        <strong class="text-[10px] text-gray-800 leading-tight">
+                        <strong class="text-[14px] text-gray-800 leading-tight">
                             {{ $property->address }}
                         </strong>
                     </div>
@@ -156,14 +156,14 @@
 
                 @if(!empty($property->badge_left))
                     <span class="bg-emerald-50 text-emerald-900 border border-emerald-200 text-[9px] px-2 py-1 rounded-lg font-extrabold inline-flex items-center gap-1">
-                        <i class="fa-solid fa-location-dot text-emerald-600 text-[8px]"></i>
+                        <i class="fa-solid fa-location-dot text-emerald-600 text-[12px]"></i>
                         {{ $property->badge_left }}
                     </span>
                 @endif
 
                 @if(!empty($property->badge_right))
                     <span class="bg-emerald-50 text-emerald-900 border border-emerald-200 text-[9px] px-2 py-1 rounded-lg font-extrabold inline-flex items-center gap-1">
-                        <i class="fa-solid fa-circle-check text-emerald-600 text-[8px]"></i>
+                        <i class="fa-solid fa-circle-check text-emerald-600 text-[12px]"></i>
                         {{ $property->badge_right }}
                     </span>
                 @endif
@@ -194,7 +194,7 @@
         </div>
 
         @if(!empty($property->price_condition))
-            <span class="shrink-0 bg-white border border-emerald-200 text-emerald-900 text-[9px] font-black px-2.5 py-1 rounded-lg shadow-sm">
+            <span class="shrink-0 bg-white border border-emerald-200 text-emerald-900 text-[12px] font-black px-2.5 py-1 rounded-lg shadow-sm">
                 <i class="fa-solid fa-tag text-emerald-600 mr-0.5"></i>
                 {{ $property->price_condition }}
             </span>
@@ -203,7 +203,7 @@
     </div>
 
 </div>
-    
+
 
     {{-- 3. DETALLES DE LA PROPIEDAD --}}
 
@@ -227,7 +227,7 @@
 
 <div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
     <i class="fa-solid fa-location-dot text-emerald-600"></i>
-    Detalles 
+    Detalles
 </div>
 
         <div class="grid grid-cols-2 gap-1.5">
@@ -236,8 +236,8 @@
                 <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-2">
                     <i class="fa-solid fa-bed text-emerald-600 w-4 text-center"></i>
 
-                    <span class="font-extrabold text-[10px] text-gray-800">
-                        {{ $property->bedrooms }} Dorm.
+                    <span class="font-extrabold text-[12px] text-gray-800">
+                        {{ $property->bedrooms }}  ->Dormitorios
                     </span>
                 </div>
             @endif
@@ -247,8 +247,8 @@
                 <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-2">
                     <i class="fa-solid fa-bath text-emerald-600 w-4 text-center"></i>
 
-                    <span class="font-extrabold text-[10px] text-gray-800">
-                        {{ $property->bathrooms_full }} B. Comp.
+                    <span class="font-extrabold text-[12px] text-gray-800">
+                        {{ $property->bathrooms_full }} ->Baños Completos
                     </span>
                 </div>
             @endif
@@ -258,18 +258,18 @@
                 <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-2">
                     <i class="fa-solid fa-toilet text-emerald-600 w-4 text-center"></i>
 
-                    <span class="font-extrabold text-[10px] text-gray-800">
-                        {{ $property->bathrooms_half }} B. Visita
+                    <span class="font-extrabold text-[12px] text-gray-800">
+                        {{ $property->bathrooms_half }} ->Baños Medios
                     </span>
                 </div>
             @endif
 
 
-            @if(!empty($property->has_sala))
+            @if(!empty($property->has_sala) && $property->has_sala > 0)
                 <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-2">
                     <i class="fa-solid fa-couch text-emerald-600 w-4 text-center"></i>
 
-                    <span class="font-extrabold text-[10px] text-gray-800">
+                    <span class="font-extrabold text-[12px] text-gray-800">
                         Sala
                     </span>
                 </div>
@@ -324,8 +324,8 @@
                 <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-center gap-2">
                     <i class="fa-solid fa-car text-emerald-600 w-4 text-center"></i>
 
-                    <span class="font-extrabold text-[10px] text-gray-800">
-                        {{ $property->garages }} Garaje
+                    <span class="font-extrabold text-[12px] text-gray-800">
+                        {{ $property->garages }} ->Garaje
                     </span>
                 </div>
             @endif
@@ -343,7 +343,7 @@
 
 <div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
     <i class="fa-solid fa-location-dot text-emerald-600"></i>
-    Características Especiales
+    La Propiedad También Cuenta o Permite:
 </div>
 
         <div class="grid grid-cols-2 gap-1.5">
@@ -358,7 +358,7 @@
                             <i class="fa-solid {{ $data['icon'] }} text-emerald-600 text-[10px]"></i>
                         </div>
 
-                        <span class="font-extrabold text-[10px] text-gray-800">
+                        <span class="font-extrabold text-[12px] text-gray-800">
                             {{ $data['label'] }}
                         </span>
 
@@ -412,7 +412,7 @@
 
                             <div>
                                 <span class="text-[8px] text-gray-400 font-black uppercase block">
-                                    Documentación
+                                    Documentación en Regla
                                 </span>
 
                                 <span class="text-[10px] font-extrabold text-gray-800">
@@ -532,7 +532,7 @@
 
         <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
 
-            <p class="text-[10px] text-gray-600 leading-relaxed whitespace-pre-line">
+            <p class="text-[12px] text-gray-600 leading-relaxed whitespace-pre-line">
                 {{ $property->description }}
             </p>
 
@@ -560,7 +560,7 @@
 
         <div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
             <i class="fa-solid fa-link text-emerald-600"></i>
-            Mas Detalles Visitanos
+             Mira esta Propiedad tambien en:
         </div>
 
         <div class="grid grid-cols-2 gap-1.5">
@@ -602,7 +602,7 @@
 
                     <div>
                         <span class="text-[8px] text-gray-400 font-black uppercase block">
-                            Recorrido
+                            Recorrido Virtual
                         </span>
                         <span class="text-[10px] font-extrabold text-gray-800">
                             Tour 360°
@@ -724,7 +724,7 @@
 
 <div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
     <i class="fa-solid fa-location-dot text-emerald-600"></i>
-    Contacto
+    Contactonos:
 </div>
 
         <div class="space-y-1.5">
@@ -826,12 +826,12 @@
 
                 <div class="text-left flex-1">
 
-                    <span class="text-[8px] text-emerald-200 font-black uppercase tracking-wider block">
+                    <span class="text-[12px] text-emerald-200 font-black uppercase tracking-wider block">
                         ¿Interesado en esta propiedad?
                     </span>
 
                     <span class="text-[11px] font-black block">
-                        Enviar mensaje / Agendar cita
+                        Envianos tu Mensaje / Agenda tu Cita
                     </span>
 
                 </div>
@@ -852,7 +852,7 @@
 @if($isPublic)
     <div id="clientMessageModal-{{ $propId }}" class="fixed inset-0 overflow-hidden z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity" onclick="toggleClientModal('{{ $propId }}', false)"></div>
-        
+
         <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
             <div class="w-screen max-w-md bg-white shadow-2xl p-5 flex flex-col justify-between border-l border-[#e2dcc8] z-10">
                 <div class="overflow-y-auto max-h-full pr-1">
@@ -987,8 +987,8 @@
         }
 
         @if(session('appointment_confirmed'))
-            @php 
-                $targetPropId = session('appointment_confirmed.property_id') ?? $propId; 
+            @php
+                $targetPropId = session('appointment_confirmed.property_id') ?? $propId;
             @endphp
             @if($targetPropId == $propId)
                 document.addEventListener("DOMContentLoaded", function() {

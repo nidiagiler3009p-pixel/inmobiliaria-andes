@@ -10,6 +10,7 @@ class Client extends Model
     use HasFactory;
 
     protected $fillable = [
+        'prospect_id',
         'user_id',
         'name',
         'last_name',
@@ -18,6 +19,7 @@ class Client extends Model
         'email',
         'social_media_source',
         'status',
+        'review_status',
         'origin_module',
         'observations',
     ];
@@ -39,4 +41,13 @@ class Client extends Model
     {
         return $this->hasMany(Schedule::class);
     }
+
+    public function portfolioEntries()
+{
+    return $this->hasMany(ClientPortfolioEntry::class);
+}
+public function prospect()
+{
+    return $this->belongsTo(Prospect::class);
+}
 }

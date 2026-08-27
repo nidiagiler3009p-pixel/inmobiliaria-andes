@@ -85,4 +85,8 @@ class User extends Authenticatable
     {
         return $this->hasMany(SocialLink::class);
     }
+    public function portfolioEntries()
+{
+    return $this->hasMany(ClientPortfolioEntry::class, 'advisor_id');
+}
 }

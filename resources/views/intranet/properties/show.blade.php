@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
 @section('admin_content')
-<div class="max-w-[98rem] mx-auto px-4 pb-16 space-y-4 font-sans" 
-     x-data="{ 
+<div class="max-w-[98rem] mx-auto px-4 pb-16 space-y-4 font-sans"
+     x-data="{
          images: [
              @foreach($property->images as $image)
                  @if(!empty($image->image_path))
@@ -31,7 +31,7 @@
              if (container) container.scrollBy({ left: -200, behavior: 'smooth' });
          }
      }">
-    
+
     <!-- BARRA SUPERIOR (VOLVER + EDITAR/ELIMINAR) -->
     <div class="flex justify-between items-center bg-white/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-emerald-100 shadow-sm">
         <a href="{{ route('properties.index') }}" class="text-xs font-bold text-[#2C4A3E] hover:text-emerald-700 flex items-center gap-1.5 transition">
@@ -53,22 +53,49 @@
 
     <!-- CONTENEDOR PRINCIPAL -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-[2px] items-start">
-        
-        <!-- COLUMNA IZQUIERDA: DETALLES (USANDO EL COMPONENTE COMPARTIDO) -->
-        <div class="lg:col-span-4 lg:max-w-[370px] ml-auto bg-[#FDFBF7] p-2 rounded-3xl border border-emerald-200/80 shadow-sm">
-            <x-property-details :property="$property" />
+
+<!-- COLUMNA IZQUIERDA: DETALLES CON SCROLL -->
+<div class="lg:col-span-4 w-full">
+
+    <div class="
+        property-sidebar-scroll
+        space-y-2
+        lg:max-h-[calc(100vh-190px)]
+        lg:overflow-y-auto
+        lg:overflow-x-hidden
+        lg:pr-3
+    ">
+
+        <div class="
+            bg-[#FDFBF7]
+            p-3
+            rounded-2xl
+            border
+            border-emerald-200/80
+            shadow-sm
+        ">
+
+            <x-property-details :property="$property"
+             :property="$property"
+             :showContact="true" />
+
+
         </div>
 
+    </div>
+
+</div>
+
         <!-- COLUMNA DERECHA: IMÁGENES Y CARRUSEL -->
-        <div class="lg:col-span-8 space-y-3">
+        <div class="lg:col-span-8 w-full lg:sticky lg:top-4">
             <div class="bg-white p-3 rounded-3xl border border-emerald-100 shadow-sm space-y-3">
-                
+
                 <!-- Imagen Principal -->
                 <div class="relative w-full bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-emerald-100 shadow-inner group">
                     <template x-if="images.length > 0">
                         <div class="w-full flex items-center justify-center relative">
                             <img :src="activeImage" class="w-full h-auto max-h-[580px] object-cover transition-all duration-300">
-                            
+
                             <button @click="prevImage()" class="absolute left-3 bg-black/50 hover:bg-black/80 text-white p-3 rounded-full backdrop-blur-md transition flex items-center justify-center shadow-lg cursor-pointer">
                                 <i class="fa-solid fa-chevron-left text-sm"></i>
                             </button>
@@ -100,7 +127,7 @@
 
                         <div id="thumbnail-container" class="flex gap-2.5 overflow-x-auto scroll-smooth py-1 px-1 no-scrollbar w-full">
                             <template x-for="(img, index) in images" :key="index">
-                                <div @click="currentIndex = index" 
+                                <div @click="currentIndex = index"
                                      class="h-20 w-28 flex-shrink-0 rounded-xl overflow-hidden border-2 cursor-pointer transition transform hover:scale-105"
                                      :class="currentIndex === index ? 'border-emerald-700 shadow-md ring-2 ring-emerald-600/30' : 'border-transparent opacity-60 hover:opacity-100'">
                                     <img :src="img" class="w-full h-full object-cover">
@@ -119,4 +146,32 @@
 
     </div>
 </div>
+<style>
+    @media (min-width: 1024px) {
+
+        .property-sidebar-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #10b981 #f1f5f9;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar {
+            width: 7px;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 20px;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #10b981;
+            border-radius: 20px;
+        }
+
+        .property-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: #047857;
+        }
+
+    }
+</style>
 @endsection
