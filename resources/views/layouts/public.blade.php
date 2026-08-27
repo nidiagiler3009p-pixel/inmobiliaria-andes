@@ -12,7 +12,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-[#FDFBF7] text-[#2C4A3E] font-sans antialiased relative overflow-x-hidden"
-      style="background-image: url('{{ asset('images/conocenos_2.jpg') }}'); background-repeat: repeat;"
+      style="background-image: url('{{ asset('images/fondo3.png') }}'); background-repeat: repeat;"
       x-data="{ mobileMenuOpen: false }">
     
   <!-- HEADER Y NAVEGACIÓN SUPERIOR UNIFICADA (Más delgada, logos intactos) -->
@@ -89,7 +89,7 @@
              x-transition:leave-start="translate-x-0"
              x-transition:leave-end="-translate-x-full"
              class="fixed inset-y-0 left-0 w-70 shadow-2xl z-60 flex flex-col justify-between overflow-y-auto bg-cover bg-center p-0"
-             style="background-image: url('{{ asset('images/tu-imagen-de-fondo.jpg') }}');">
+             style="background-image: url('{{ asset('images/images.jpg') }}');">
             <div>
                 <!-- SECCIÓN SUPERIOR (CABECERA) -->
                 <div class="px-4 py-3 border-b border-gray-700/50 relative flex justify-center items-center bg-[#1a2b24]">
