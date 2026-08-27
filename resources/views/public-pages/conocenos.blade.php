@@ -256,17 +256,17 @@
                                 [
                                     'nombre' => 'Coop.Daquilema', 
                                     'url' => 'https://www.coopdaquilema.com/creditos/#VIVIENDA', 
-                                    'logo' => asset('images/bancos/daquilema.png')
+                                    'logo' => asset('images/bancos/Daquilema.png')
                                 ],
                                 [
                                     'nombre' => 'Coop. Riobamba', 
                                     'url' => 'https://www.cooprio.fin.ec/?page_id=563', 
-                                    'logo' => asset('images/bancos/riobamba.png')
+                                    'logo' => asset('images/bancos/Riobamba.png')
                                 ],
                                 [
                                     'nombre' => 'ISSFA', 
                                     'url' => 'https://www.issfa.mil.ec/home/creditos-2/hipotecarios/', 
-                                    'logo' => asset('images/bancos/ISSFA.png')
+                                    'logo' => asset('images/bancos/issfa.png')
                                 ],
                                 [
                                     'nombre' => 'Mutualista', 

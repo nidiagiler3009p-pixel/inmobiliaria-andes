@@ -12,7 +12,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-[#FDFBF7] text-[#2C4A3E] font-sans antialiased relative overflow-x-hidden"
-      style="background-image: url('{{ asset('images/conocenos_2.png') }}'); background-repeat: repeat;"
+      style="background-image: url('{{ asset('images/conocenos_2.jpg') }}'); background-repeat: repeat;"
       x-data="{ mobileMenuOpen: false }">
     
   <!-- HEADER Y NAVEGACIÓN SUPERIOR UNIFICADA (Más delgada, logos intactos) -->
