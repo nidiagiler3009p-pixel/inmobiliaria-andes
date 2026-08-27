@@ -41,10 +41,17 @@ RUN composer install \
     --no-interaction
 
 # Limpiar cachés de Laravel
-RUN php artisan optimize:clear
-RUN php artisan config:clear
-RUN php artisan route:clear
-RUN php artisan view:clear
+# Instalar dependencias PHP primero
+RUN composer install \
+    --no-dev \
+    --optimize-autoloader \
+    --no-interaction
+
+# Instalar y compilar frontend
+RUN npm ci && npm run build
+
+# Crear enlace de storage
+RUN php artisan storage:link || true
 
 # Instalar y compilar frontend
 RUN npm ci && npm run build
