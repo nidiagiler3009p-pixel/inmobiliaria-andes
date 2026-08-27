@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 class PublicController extends Controller
 {
-    public function index() {
-        $properties = Property::where('status','Disponible')->latest()->take(6)->get();
-        return view('welcome', compact('properties'));
-    }
+  public function index()
+{
+    return redirect()->route('conocenos');
+}
 
     public function conocenos() { return view('public-pages.conocenos'); }
     public function asesorias() { return view('public-pages.asesorias'); }
