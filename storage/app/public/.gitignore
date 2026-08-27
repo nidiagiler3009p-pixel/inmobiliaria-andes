@@ -1,2 +1,4 @@
 *
+!properties/
+!properties/**
 !.gitignore
