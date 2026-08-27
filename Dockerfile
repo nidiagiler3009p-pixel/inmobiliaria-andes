@@ -33,7 +33,10 @@ WORKDIR /var/www/html
 
 # Copiar proyecto
 COPY . .
-
+RUN php artisan optimize:clear
+RUN php artisan config:clear
+RUN php artisan route:clear
+RUN php artisan view:clear
 # Instalar dependencias PHP
 RUN composer install \
     --no-dev \
@@ -42,6 +45,7 @@ RUN composer install \
 
 # Instalar y compilar frontend
 RUN npm ci && npm run build
+RUN php artisan storage:link || true
 
 # Permisos Laravel
 RUN chown -R www-data:www-data /var/www/html/storage \
