@@ -8,8 +8,27 @@
             <i class="fa-solid fa-user-pen text-sm"></i>
         </div>
         <div class="text-center pt-2">
-            <h1 class="text-xl font-bold text-[#1E392A]">Editar Datos del Cliente</h1>
-            <p class="text-[10px] text-[#556B5D] mt-1">Complete o corrija la información antes de confirmar el cliente.</p>
+           @if($client->review_status === 'Confirmado')
+
+    <h2 class="text-2xl font-bold text-[#18382f]">
+        Datos del Cliente
+    </h2>
+
+    <p class="text-sm text-gray-600">
+        Consulte o actualice la información del cliente.
+    </p>
+
+@else
+
+    <h2 class="text-2xl font-bold text-[#18382f]">
+        Editar Datos del Cliente
+    </h2>
+
+    <p class="text-sm text-gray-600">
+        Complete o corrija la información antes de confirmar el cliente.
+    </p>
+
+@endif 
         </div>
     </header>
 
@@ -24,6 +43,19 @@
 
     <form method="POST" action="{{ route('clients.update', $client->id) }}" class="bg-[#EFECE6] border border-[#D8D3C8] rounded-xl px-4 py-3 shadow-sm">
         @csrf @method('PUT')
+         <input
+    type="hidden"
+    name="source_type"
+    value="{{ request('source_type') }}"
+>
+
+<input
+    type="hidden"
+    name="source_id"
+    value="{{ request('source_id') }}"
+>
+      
+
 
         <h2 class="text-sm font-bold text-[#1E392A] mb-3"><i class="fa-solid fa-id-card text-[#2C5E43] mr-1"></i> Información del Cliente</h2>
 
@@ -72,10 +104,88 @@
         </div>
 
         <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-[#D8D3C8]">
-            <a href="{{ route('clients.show', $client->id) }}" class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-4 py-2 rounded-lg text-[10px] font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Cancelar</a>
+           @php
+    $cancelRoute = match (request('source_type')) {
+        'tramite', 'contact', 'advisory', 'integral' => route('admin.citas-totales'),
+        'appointment' => route('gestion.citas'),
+        default => route('gestion.citas'),
+    };
+@endphp
+
+<a href="{{ $cancelRoute }}"
+   class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-4 py-2 rounded-lg text-[10px] font-semibold">
+    <i class="fa-solid fa-arrow-left mr-1"></i>
+    Cancelar
+</a>
             <button type="submit" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-4 py-2 rounded-lg text-[10px] font-semibold shadow-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar cambios</button>
         </div>
     </form>
+    @if($client->review_status !== 'Confirmado')
+
+    <div class="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 shadow-sm">
+
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+            <div>
+                <h3 class="text-sm font-bold text-[#1E392A]">
+                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>
+                    Confirmar cliente
+                </h3>
+
+                <p class="text-[10px] text-gray-600 mt-1">
+                    Revise que los datos estén correctos antes de enviar este registro definitivamente a Clientes / Trámites.
+                </p>
+            </div>
+
+<form
+    method="POST"
+    action="{{ route('clients.confirm-review', $client->id) }}"
+>
+    @csrf
+    @method('PATCH')
+
+    {{-- Registro exacto que originó esta revisión --}}
+    <input
+        type="hidden"
+        name="source_type"
+        value="{{ request('source_type') }}"
+    >
+
+    <input
+        type="hidden"
+        name="source_id"
+        value="{{ request('source_id') }}"
+    >
+
+    <button
+        type="submit"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-[10px] font-bold shadow transition"
+    >
+        <i class="fa-solid fa-check mr-1"></i>
+        Confirmar Cliente
+    </button>
+</form>
+
+        </div>
+
+    </div>
+
+@else
+
+    <div class="mt-4 bg-emerald-100 border border-emerald-300 rounded-xl p-4 text-center">
+
+        <p class="text-sm font-bold text-emerald-800">
+            <i class="fa-solid fa-circle-check mr-1"></i>
+            Cliente confirmado
+        </p>
+
+        <p class="text-[10px] text-emerald-700 mt-1">
+            Este cliente ya fue revisado y confirmado.
+        </p>
+
+    </div>
+
+@endif
 </div>
 
 @endsection

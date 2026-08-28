@@ -82,10 +82,28 @@
             </div>
         </div>
 
-        <div class="w-full lg:w-auto flex justify-end">
-            <button type="button" onclick="openCreateModal()" class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow transition flex items-center gap-2">
-                <i class="fa-solid fa-plus-circle"></i> Ingresar Nueva Cita Manual
+        <div class="w-full lg:w-auto flex flex-wrap justify-end gap-2">
+
+            {{-- ACCESO A CARTERA --}}
+            <a
+                href="{{ route('admin.cartera') }}"
+                class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow transition flex items-center gap-2"
+                title="Ir a Cartera"
+            >
+                <i class="fa-solid fa-folder-open"></i>
+                Ir a Cartera
+            </a>
+
+            {{-- NUEVA CITA --}}
+            <button
+                type="button"
+                onclick="openCreateModal()"
+                class="bg-[#2C5E43] hover:bg-[#1E392A] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow transition flex items-center gap-2"
+            >
+                <i class="fa-solid fa-plus-circle"></i>
+                Ingresar Nueva Cita Manual
             </button>
+
         </div>
     </form>
 
@@ -265,6 +283,57 @@
                                     title="Modificar Datos">
                                     <i class="fa-solid fa-pen text-xs"></i>
                                 </button>
+
+                                {{-- EXPORTAR A CLIENTES --}}
+                              {{-- EXPORTAR A CLIENTES / TRANSMUTAR A TRÁMITE --}}
+@if(
+    $appointment->prospect_id
+    && $appointment->status === 'Realizado'
+)
+
+    <form
+        method="POST"
+        action="{{ route(
+            'gestion.citas.exportar-cliente',
+            $appointment->id
+        ) }}"
+        class="inline-flex"
+<form
+    id="export-client-form-{{ $appointment->id }}"
+    method="POST"
+    action="{{ route('gestion.citas.exportar-cliente', $appointment->id) }}"
+    class="inline-flex"
+>
+    @csrf
+
+    <button
+        type="button"
+        onclick="openExportClientModal('{{ $appointment->id }}')"
+        class="bg-sky-600 hover:bg-sky-700 text-white p-1.5 rounded-lg shadow transition"
+        title="Convertir a Trámite y enviar a Clientes"
+    >
+        <i class="fa-solid fa-file-export text-xs"></i>
+    </button>
+
+</form>
+
+@else
+
+    <button
+        type="button"
+        disabled
+        class="bg-gray-200 text-gray-400 border border-gray-300 p-1.5 rounded-lg cursor-not-allowed"
+        title="{{
+            !$appointment->prospect_id
+                ? 'La cita no está vinculada a un prospecto'
+                : 'Disponible únicamente cuando la cita esté Realizada'
+        }}"
+    >
+        <i class="fa-solid fa-lock text-xs"></i>
+    </button>
+
+@endif
+
                                 {{-- PASAR A CARTERA --}}
 @if($appointment->client_id || $appointment->prospect_id)
 
@@ -780,6 +849,7 @@
 
     </div>
 </div>
+
 {{-- MODAL CONFIRMAR ELIMINACIÓN --}}
 <div
     id="delete-modal"
@@ -854,8 +924,128 @@
 
     </div>
 </div>
+{{-- MODAL EXPORTAR A CLIENTES --}}
+<div
+    id="export-client-modal"
+    class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+>
+    <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
 
+        <div class="bg-sky-700 text-white px-6 py-4 flex items-center justify-between">
+            <h3 class="font-bold text-base flex items-center gap-2">
+                <i class="fa-solid fa-file-export"></i>
+                Convertir cita a Trámite
+            </h3>
+
+            <button
+                type="button"
+                onclick="closeExportClientModal()"
+                class="text-white hover:text-sky-100 text-lg"
+            >
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="p-6">
+
+            <div class="w-14 h-14 mx-auto mb-4 bg-sky-100 text-sky-700 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-arrow-right-arrow-left text-xl"></i>
+            </div>
+
+            <h4 class="font-bold text-[#1E392A] text-lg text-center mb-2">
+                ¿Desea iniciar el trámite?
+            </h4>
+
+            <p class="text-sm text-gray-600 text-center">
+                La cita de
+                <span id="export-client-name" class="font-bold text-[#1E392A]">
+                    este prospecto
+                </span>
+                está en estado
+                <span class="font-bold text-emerald-700">
+                    Realizado
+                </span>.
+            </p>
+
+            <p class="text-xs text-gray-500 text-center mt-2">
+                Al continuar, la cita será transmutada a Trámite
+                y el cliente pasará a la pantalla de revisión.
+            </p>
+
+        </div>
+
+        <div class="px-6 pb-6 flex justify-center gap-3">
+
+            <button
+                type="button"
+                onclick="closeExportClientModal()"
+                class="bg-gray-300 hover:bg-gray-400 text-[#2C3E35] px-5 py-2 rounded-lg font-semibold transition"
+            >
+                <i class="fa-solid fa-xmark mr-1"></i>
+                Cancelar
+            </button>
+
+            <form
+                id="export-client-form"
+                method="POST"
+                action=""
+            >
+                @csrf
+
+                <button
+                    type="submit"
+                    class="bg-sky-700 hover:bg-sky-800 text-white px-5 py-2 rounded-lg font-semibold shadow transition"
+                >
+                    <i class="fa-solid fa-check mr-1"></i>
+                    Sí, convertir
+                </button>
+            </form>
+
+        </div>
+
+    </div>
+</div>
 <script>
+    function openExportClientModal(id, clientName) {
+
+    const modal =
+        document.getElementById('export-client-modal');
+
+    const form =
+        document.getElementById('export-client-form');
+
+    const name =
+        document.getElementById('export-client-name');
+
+    if (!modal || !form) {
+        return;
+    }
+
+    form.action =
+        "{{ url('/intranet/citas') }}/" +
+        id +
+        "/exportar-cliente";
+
+    if (name) {
+        name.textContent =
+            clientName && clientName.trim() !== ''
+                ? clientName
+                : 'este prospecto';
+    }
+
+    modal.classList.remove('hidden');
+}
+
+
+function closeExportClientModal() {
+
+    const modal =
+        document.getElementById('export-client-modal');
+
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
 
 console.log('SCRIPT DE CITAS CARGADO CORRECTAMENTE');
 

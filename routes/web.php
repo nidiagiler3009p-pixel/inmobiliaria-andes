@@ -175,6 +175,13 @@ Route::get( '/intranet/cartera', [AppointmentController::class, 'cartera'])->nam
 Route::post( '/intranet/citas/{id}/cartera', [AppointmentController::class, 'moveToPortfolio'])->whereNumber('id')->name('gestion.citas.cartera');
 Route::post('/intranet/cartera/{prospect}/convertir-cliente', [AppointmentController::class, 'convertProspectToClient'])->whereNumber('prospect')->name('admin.cartera.convertir-cliente');    // ------------------------------------------
 Route::patch('/intranet/clients/{client}/confirmar-revision', [ClientController::class, 'confirmReview'])->name('clients.confirm-review');
+Route::post( '/intranet/citas/{id}/exportar-cliente',[AppointmentController::class, 'exportAppointmentToClient'])->whereNumber('id')->name('gestion.citas.exportar-cliente');
+   
+    
+
+
+
+
 // MÓDULO DE CONTABILIDAD
     // ------------------------------------------
     // Redirección de seguridad si intentan entrar por GET a los métodos POST de contabilidad

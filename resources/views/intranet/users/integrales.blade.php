@@ -46,12 +46,21 @@
                 <a href="{{ route('admin.citas-totales', ['filtro' => request('filtro'), 'status' => 'Completado']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition {{ request('status') == 'Completado' ? 'bg-[#2C5E43] text-white shadow' : 'bg-white border border-[#D8D3C8] text-[#2C3E35] hover:bg-gray-50' }}">Completado</a>
             </div>
         </div>
-        <div class="mt-4">
-            <a href="{{ route('admin.citas.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5E43] hover:bg-[#1E392A] text-white rounded-lg font-semibold text-xs shadow transition">
-                <i class="fa-solid fa-circle-plus"></i> Ingresar Nuevo Registro
-            </a>
-        </div>
-    </div>
+<div class="mt-4 flex flex-wrap items-center gap-2">
+
+    <a href="{{ route('admin.citas.create') }}"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-[#2C5E43] hover:bg-[#1E392A] text-white rounded-lg font-semibold text-xs shadow transition">
+        <i class="fa-solid fa-circle-plus"></i>
+        Ingresar Nuevo Registro
+    </a>
+
+    <a href="{{ route('admin.cartera') }}"
+       class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-xs shadow transition">
+        <i class="fa-solid fa-folder-open"></i>
+        Ir a Cartera
+    </a>
+
+</div>
 
     {{-- TABLA PRINCIPAL --}}
     <div class="bg-[#EFECE6] border border-[#D8D3C8] rounded-2xl p-4 shadow-sm overflow-hidden">

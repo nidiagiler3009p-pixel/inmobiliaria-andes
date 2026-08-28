@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\Tramite;
 use Illuminate\Http\Request;
 use App\Models\Client;
 use App\Models\User;
@@ -59,6 +59,7 @@ public function update(Request $request, Client $client)
 {
     $request->validate([
         'name' => 'required|string|max:255',
+
         'last_name' => 'required|string|max:255',
 
         'identification_card' =>
@@ -80,6 +81,39 @@ public function update(Request $request, Client $client)
             'nullable|string|max:3000',
     ]);
 
+    /*
+    |--------------------------------------------------------------------------
+    | DATOS TEMPORALES SI FALTAN CAMPOS OBLIGATORIOS
+    |--------------------------------------------------------------------------
+    */
+
+    $email = trim((string) $request->email);
+
+    if ($email === '') {
+        $email = 'prospecto-' . ($client->prospect_id ?? $client->id) . '@pendiente.local';
+    }
+
+    $identification = trim(
+        (string) $request->identification_card
+    );
+
+    if ($identification === '') {
+        $identification =
+            'PEND-' .
+            str_pad(
+                (string) ($client->prospect_id ?? $client->id),
+                6,
+                '0',
+                STR_PAD_LEFT
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZAR CLIENTE
+    |--------------------------------------------------------------------------
+    */
+
     $client->update([
         'name' =>
             $request->name,
@@ -88,13 +122,13 @@ public function update(Request $request, Client $client)
             $request->last_name,
 
         'identification_card' =>
-            $request->identification_card,
+            $identification,
 
         'phone' =>
             $request->phone,
 
         'email' =>
-            $request->email,
+            $email,
 
         'status' =>
             $request->status,
@@ -106,18 +140,37 @@ public function update(Request $request, Client $client)
             $request->observations,
     ]);
 
-    return redirect()
-        ->route(
-            'clients.show',
-            $client->id
-        )
-        ->with(
-            'success',
-            'Datos del cliente actualizados correctamente.'
-        );
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | VOLVER A LA FICHA
+    |--------------------------------------------------------------------------
+    */
+
+$sourceType = $request->input('source_type');
+$sourceId = $request->input('source_id');
+
+$url = route('clients.show', [
+    'client' => $client->id,
+]);
+
+if ($sourceType && $sourceId) {
+    $url .= '?' . http_build_query([
+        'source_type' => $sourceType,
+        'source_id' => $sourceId,
+    ]);
 }
 
-    // Eliminar un cliente de la base de datos
+return redirect()
+    ->to($url)
+    ->with(
+        'success',
+        'Datos del cliente actualizados correctamente.'
+    
+    );
+}    // Eliminar un cliente de la base de datos
     public function destroy(Client $client)
     {
         $client->delete();
@@ -131,13 +184,117 @@ public function edit(Client $client)
         compact('client')
     );
 }
-    public function confirmReview(Client $client) {
-    if ($client->review_status === 'Confirmado') return redirect()->route('clients.show', $client->id)->with('success', 'Este cliente ya se encuentra confirmado.');
-    $client->review_status = 'Confirmado';
-    $client->save();
-    return redirect()->route('clients.show', $client->id)->with('success', 'Cliente confirmado correctamente y listo para pasar a Clientes / Trámites.');
+public function confirmReview(Request $request, Client $client)
+{
+    /*
+    |--------------------------------------------------------------------------
+    | 1. CONFIRMAR CLIENTE
+    |--------------------------------------------------------------------------
+    */
+
+    if ($client->review_status !== 'Confirmado') {
+        $client->review_status = 'Confirmado';
+        $client->save();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 2. RECIBIR ORIGEN EXACTO
+    |--------------------------------------------------------------------------
+    */
+
+    $sourceType = $request->input('source_type');
+    $sourceId = $request->input('source_id');
+
+    /*
+    |--------------------------------------------------------------------------
+    | 3. SI VIENE DE UNA CITA
+    |--------------------------------------------------------------------------
+    */
+
+    if ($sourceType === 'appointment' && $sourceId) {
+
+        $cita = AppointmentTracking::where('id', $sourceId)
+            ->where('client_id', $client->id)
+            ->first();
+
+        if ($cita) {
+
+            if ($cita->status === 'Realizado') {
+                $cita->status = 'Transferido';
+                $cita->save();
+            }
+
+            return redirect()
+                ->route('gestion.citas')
+                ->with(
+                    'success',
+                    'Cliente confirmado correctamente. La cita fue transmutada a Clientes / Trámites.'
+                );
+        }
+    }
+
+
+/*
+|--------------------------------------------------------------------------
+| 4. TRÁMITE EXACTO DESDE CITAS INTEGRALES
+|--------------------------------------------------------------------------
+*/
+
+if ($sourceType === 'tramite' && $sourceId) {
+
+    $tramite = Tramite::where('id', $sourceId)
+        ->where('prospect_id', $client->prospect_id)
+        ->first();
+
+    if ($tramite) {
+
+        if ($tramite->status === 'Completado') {
+            $tramite->status = 'Transferido';
+            $tramite->save();
+        }
+
+        return redirect()
+            ->route('admin.citas-totales')
+            ->with(
+                'success',
+                'Cliente confirmado correctamente. El trámite fue transmutado a Clientes.'
+            );
+    }
 }
 
+    /*
+    |--------------------------------------------------------------------------
+    | 4. CITAS INTEGRALES
+    |--------------------------------------------------------------------------
+    */
+
+    $origin = strtolower(
+        trim((string) $client->origin_module)
+    );
+
+    if (str_contains($origin, 'integral')) {
+        return redirect()
+            ->route('admin.citas-totales')
+            ->with(
+                'success',
+                'Cliente confirmado correctamente.'
+            );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 5. OTROS ORÍGENES
+    |--------------------------------------------------------------------------
+    */
+
+    return redirect()
+        ->route('clients.show', $client->id)
+        ->with(
+            'success',
+            'Cliente confirmado correctamente.'
+        );
+}
     // Procesar el formulario público del catálogo, registrar el cliente, la cita y heredar el asesor de la propiedad
     public function sendMessageAndCreateAppointment(Request $request)
     {
@@ -169,7 +326,33 @@ public function edit(Client $client)
         if ($client->name !== $request->name) {
             $client->update(['name' => $request->name]);
         }
-        
+        /*
+|--------------------------------------------------------------------------
+| 3. BUSCAR O CREAR PROSPECTO
+|--------------------------------------------------------------------------
+*/
+
+$prospectService = app(\App\Services\ProspectService::class);
+
+$prospect = $prospectService->findOrCreate(
+    $request->name,
+    $client->last_name ?? '',
+    $request->phone,
+    $client->email,
+    null,
+    'Catálogo Público'
+);
+
+/*
+|--------------------------------------------------------------------------
+| VINCULAR CLIENTE CON PROSPECTO
+|--------------------------------------------------------------------------
+*/
+
+if ($client->prospect_id !== $prospect->id) {
+    $client->prospect_id = $prospect->id;
+    $client->save();
+}
         // 3. Evaluar automáticamente si hay fecha y hora (Confirmada o Pendiente)
         $hasDate = !empty($request->appointment_date);
         $appointmentStatus = $hasDate ? 'Confirmada' : 'Pendiente';
@@ -177,6 +360,7 @@ public function edit(Client $client)
         // 4. Registrar la cita/seguimiento en la base de datos
         AppointmentTracking::create([
             'client_id' => $client->id,
+            'prospect_id' => $prospect->id,
             'user_id' => $property->user_id ?? null, // Hereda el asesor encargado de esta propiedad
             'property_id' => $property->id,
             'client_name' => $client->name . ' ' . ($client->last_name ?? ''),

@@ -163,10 +163,12 @@ public function cambiarEstado(Request $request, $id, ProspectService $prospectSe
     $estadoAnterior = $cita->status;
 
     /* VALIDACIONES DE FLUJO */
-    if (in_array($request->status, ['Agendado','Confirmada']) && empty($cita->appointment_date)) {
-        return redirect()->route('gestion.citas')->with('error', 'Para cambiar la cita a este estado primero debe asignar una fecha y hora.');
-    }
-
+if (in_array($request->status, ['Agendado','Confirmada','Realizado']) && empty($cita->appointment_date)) {
+    return redirect()->route('gestion.citas')->with(
+        'error',
+        'Para cambiar la cita a este estado primero debe asignar una fecha y hora.'
+    );
+}
     /* CANCELACIÓN */
     if ($request->status === 'Cancelado') {
         return DB::transaction(function () use ($request, $cita, $estadoAnterior, $prospectService) {
@@ -244,8 +246,13 @@ public function cambiarEstado(Request $request, $id, ProspectService $prospectSe
             });
             $collection = $collection->concat($asesorias);
         }
-        if (!$filtro || $filtro === 'todos' || $filtro === 'tramite') {
-            $query = Tramite::query()->whereNotIn('status', ['eliminado','Transferido']);
+       if (!$filtro || $filtro === 'todos' || $filtro === 'tramite') {
+    $query = Tramite::query()
+        ->whereNotIn('status', ['eliminado','Transferido'])
+        ->where(function ($q) {
+            $q->whereNull('subject')
+              ->orWhere('subject', 'not like', 'Trámite generado desde Cita #%');
+        });
             if ($statusFiltro) $query->where('status', $statusFiltro);
             $tramites = $query->get()->map(function ($item) {
                 $obj = new \stdClass();
@@ -721,7 +728,30 @@ public function updateProspectProfile(Request $request, $id, ProspectService $pr
                 'tramite_type' => $request->tramite_type ?? 'Otros trámites',
                 'ubicacion' => $direccionComun,
                 'message' => $request->message ?? $request->tramite_detalle ?? $request->requirements_message ?? '',
-                'contact_preference' => $request->contact_preference ?? 'WhatsApp',
+'contact_preference' => match (
+    strtolower(trim(
+        $cita->source_channel
+        ?? $cita->channel
+        ?? ''
+    ))
+) {
+    'whatsapp' => 'WhatsApp',
+
+    'telefono',
+    'teléfono',
+    'llamada',
+    'llamada telefonica',
+    'llamada telefónica' => 'Llamada telefónica',
+
+    'correo',
+    'email',
+    'correo electronico',
+    'correo electrónico' => 'Correo electrónico',
+
+    default => 'WhatsApp',
+},
+
+
                 'accepted_privacy_policy' => 1,
                 'status' => $request->status ?? 'Pendiente'
             ]);
@@ -903,8 +933,25 @@ public function exportar($id, ProspectService $prospectService) {
     if (!$prospect) return redirect()->route('admin.citas-totales')->with('error', 'No se encontró el prospecto relacionado con este trámite.');
 
     /* EVITAR CLIENTE DUPLICADO */
-    $client = Client::where('prospect_id', $prospect->id)->first();
-    if ($client) return redirect()->route('clients.show', $client->id)->with('success', 'Este prospecto ya se encuentra registrado en Clientes. Se abrió su ficha de revisión.');
+   $client = Client::where('prospect_id', $prospect->id)->first();
+
+if ($client) {
+    $client->review_status = 'Pendiente';
+    $client->save();
+
+    
+
+    return redirect()
+        ->route('clients.show', [
+            'client' => $client->id,
+            'source_type' => 'tramite',
+            'source_id' => $tramite->id,
+        ])
+        ->with(
+            'success',
+            'Este prospecto ya se encuentra registrado en Clientes. Revise y confirme sus datos.'
+        );
+}
 
     /* RED SOCIAL PRINCIPAL, SI EXISTE */
     $social = $prospect->contacts->first(fn($contact) => in_array($contact->type, ['instagram','facebook','tiktok']));
@@ -917,7 +964,9 @@ public function exportar($id, ProspectService $prospectService) {
         'last_name' => $prospect->last_name ?: ($tramite->last_name ?? ''),
         'identification_card' => $prospect->identification ?: ($tramite->identification_card ?? null),
         'phone' => $prospect->phone ?: ($tramite->phone ?? ''),
-        'email' => $prospect->email ?: ($tramite->email ?? null),
+       'email' => !empty($prospect->email)
+    ? $prospect->email
+    : 'sin-correo-prospecto-' . $prospect->id . '@pendiente.local',
         'social_media_source' => $social?->type,
         'status' => 'Interesado',
         'review_status' => 'Pendiente',
@@ -938,7 +987,16 @@ public function exportar($id, ProspectService $prospectService) {
     );
 
     /* ABRIR REVISIÓN DEL CLIENTE */
-    return redirect()->route('clients.show', $client->id)->with('success', 'Trámite exportado correctamente. Revise y confirme los datos del cliente.');
+    return redirect()
+    ->route('clients.show', [
+        'client' => $client->id,
+        'source_type' => 'tramite',
+        'source_id' => $tramite->id,
+    ])
+    ->with(
+        'success',
+        'Trámite exportado correctamente. Revise y confirme los datos del cliente.'
+    );
 }
     public function destroyIntegral($id) {
         $cleanId = preg_replace('/[^0-9]/', '', $id);
@@ -1001,4 +1059,318 @@ public function exportar($id, ProspectService $prospectService) {
         }
         return $cadena;
     }
+public function exportAppointmentToClient(
+    $id,
+    ProspectService $prospectService
+) {
+    return DB::transaction(function () use ($id, $prospectService) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1. BUSCAR LA CITA
+        |--------------------------------------------------------------------------
+        */
+
+        $cita = AppointmentTracking::with([
+            'prospect',
+            'client',
+            'user',
+            'property'
+        ])->find($id);
+
+        if (!$cita) {
+            return redirect()
+                ->route('gestion.citas')
+                ->with(
+                    'error',
+                    'La cita seleccionada no existe.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. SOLO CITAS REALIZADAS
+        |--------------------------------------------------------------------------
+        */
+
+        if ($cita->status !== 'Realizado') {
+            return redirect()
+                ->route('gestion.citas')
+                ->with(
+                    'error',
+                    'La cita debe estar en estado Realizado antes de iniciar el trámite.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 3. VERIFICAR PROSPECTO
+        |--------------------------------------------------------------------------
+        */
+
+        if (empty($cita->prospect_id)) {
+            return redirect()
+                ->route('gestion.citas')
+                ->with(
+                    'error',
+                    'Esta cita no está relacionada con un prospecto.'
+                );
+        }
+
+        $prospect = Prospect::with([
+            'contacts',
+            'aliases'
+        ])->find($cita->prospect_id);
+
+        if (!$prospect) {
+            return redirect()
+                ->route('gestion.citas')
+                ->with(
+                    'error',
+                    'No se encontró el prospecto relacionado con esta cita.'
+                );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 4. TRANSMUTAR CITA A TRÁMITE
+        |--------------------------------------------------------------------------
+        */
+
+        $tramite = Tramite::where(
+            'prospect_id',
+            $prospect->id
+        )
+        ->where(
+            'subject',
+            'like',
+            '%Cita #' . $cita->id . '%'
+        )
+        ->first();
+
+        if (!$tramite) {
+
+            $tramite = Tramite::create([
+
+                'prospect_id' =>
+                    $prospect->id,
+
+                'first_name' =>
+                    $prospect->name
+                    ?? 'Sin nombre',
+
+                'last_name' =>
+                    $prospect->last_name
+                    ?? 'Sin apellido',
+
+                'email' =>
+                    $prospect->email,
+
+                'phone' =>
+                    $prospect->phone,
+
+                'identification_card' =>
+                    $prospect->identification
+                    ?? '0000000000',
+
+                'subject' =>
+                    'Trámite generado desde Cita #' .
+                    $cita->id,
+
+                'tramite_type' =>
+                    'Otros trámites',
+
+                'ubicacion' =>
+                    $cita->location_reference
+                    ?? (
+                        $cita->property->address
+                        ?? 'N/A'
+                    ),
+
+                'message' =>
+                    $cita->notes
+                    ?? 'Trámite iniciado desde Gestión de Citas.',
+
+                /*
+                 * Valor válido para el ENUM:
+                 * WhatsApp
+                 * Llamada telefónica
+                 * Correo electrónico
+                 */
+                'contact_preference' =>
+                    'WhatsApp',
+
+                'accepted_privacy_policy' =>
+                    1,
+
+                /*
+                 * La cita está realizada,
+                 * pero el trámite recién inicia.
+                 */
+                'status' =>
+                    'Pendiente',
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | HISTORIAL DEL TRÁMITE
+            |--------------------------------------------------------------------------
+            */
+
+            $prospectService->addHistory(
+                $prospect,
+                'Cita transmutada a Trámite',
+                'tramite',
+                $tramite->id,
+                'Realizado',
+                'Pendiente',
+                'La cita #' .
+                    $cita->id .
+                    ' fue realizada y se convirtió en un trámite.',
+                auth()->id()
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 5. BUSCAR O CREAR CLIENTE
+        |--------------------------------------------------------------------------
+        */
+
+        $client = Client::where(
+            'prospect_id',
+            $prospect->id
+        )->first();
+
+        $social = $prospect->contacts
+            ->first(
+                fn ($contact) =>
+                    in_array(
+                        strtolower(
+                            $contact->type ?? ''
+                        ),
+                        [
+                            'instagram',
+                            'facebook',
+                            'tiktok'
+                        ]
+                    )
+            );
+
+if (!$client) {
+
+    // Datos mínimos obligatorios para crear el cliente
+    $clientEmail = trim((string) ($prospect->email ?? ''));
+
+    if ($clientEmail === '') {
+        $clientEmail = 'prospecto-' . $prospect->id . '@pendiente.local';
+    }
+
+    $clientIdentification = trim((string) ($prospect->identification ?? ''));
+
+    if ($clientIdentification === '') {
+        $clientIdentification = 'PEND-' . str_pad(
+            (string) $prospect->id,
+            6,
+            '0',
+            STR_PAD_LEFT
+        );
+    }
+
+    $clientPhone = trim((string) ($prospect->phone ?? ''));
+
+    if ($clientPhone === '') {
+        $clientPhone = '0000000000';
+    }
+
+    $client = Client::create([
+        'prospect_id' => $prospect->id,
+
+        'user_id' => $cita->user_id ?? auth()->id(),
+
+        'name' => $prospect->name ?? 'Sin nombre',
+
+        'last_name' => $prospect->last_name ?? 'Sin apellido',
+
+        'identification_card' => $clientIdentification,
+
+        'phone' => $clientPhone,
+
+        'email' => $clientEmail,
+
+        'social_media_source' => $social?->type,
+
+        'status' => 'Interesado',
+
+        'review_status' => 'Pendiente',
+
+        'origin_module' => 'Gestión de Citas - Trámite',
+
+        'observations' => $cita->notes ?? $prospect->notes,
+    ]);
+}else {
+
+    /*
+    |--------------------------------------------------------------------------
+    | CLIENTE YA EXISTENTE
+    |--------------------------------------------------------------------------
+    | No se crea otro cliente.
+    | Se vuelve a abrir la revisión para esta cita específica.
+    */
+
+    $client->review_status = 'Pendiente';
+    $client->save();
 }
+        /*
+        |--------------------------------------------------------------------------
+        | 6. VINCULAR CITA CON CLIENTE
+        |--------------------------------------------------------------------------
+        */
+
+        if ($cita->client_id !== $client->id) {
+
+            $cita->client_id =
+                $client->id;
+
+            $cita->save();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 7. HISTORIAL DE EXPORTACIÓN
+        |--------------------------------------------------------------------------
+        */
+
+        $prospectService->addHistory(
+            $prospect,
+            'Exportado a Clientes como Trámite',
+            'appointment',
+            $cita->id,
+            'Realizado',
+            'Trámite',
+            'La cita realizada fue exportada a Clientes e inició el trámite #' .
+                $tramite->id .
+                '.',
+            auth()->id()
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | 8. FICHA DE REVISIÓN
+        |--------------------------------------------------------------------------
+        */
+
+return redirect()
+    ->route('clients.show', [
+        'client' => $client->id,
+        'source_type' => 'appointment',
+        'source_id' => $cita->id,
+    ])
+    ->with(
+        'success',
+        'La cita fue realizada y transmutada correctamente a Trámite. Revise los datos del cliente.'
+    );
+    });
+}
+
+    }
