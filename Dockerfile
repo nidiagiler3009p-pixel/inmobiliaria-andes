@@ -20,47 +20,38 @@ RUN apt-get update && apt-get install -y \
     pcntl \
     bcmath \
     gd \
-    zip
+    zip \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Activar mod_rewrite de Apache para Laravel
+# Activar mod_rewrite
 RUN a2enmod rewrite
 
 # Instalar Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Directorio de Laravel
+# Directorio Laravel
 WORKDIR /var/www/html
 
 # Copiar proyecto
 COPY . .
 
-# Instalar dependencias PHP primero
+# Dependencias PHP
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction
 
-# Limpiar cachés de Laravel
-# Instalar dependencias PHP primero
-RUN composer install \
-    --no-dev \
-    --optimize-autoloader \
-    --no-interaction
-
-# Instalar y compilar frontend
+# Dependencias frontend
 RUN npm ci && npm run build
-
-# Crear enlace de storage
-RUN php artisan storage:link || true
-
-# Instalar y compilar frontend
-RUN npm ci && npm run build
-
-# Crear enlace de storage
-RUN php artisan storage:link || true
 
 # Permisos Laravel
-RUN chown -R www-data:www-data /var/www/html/storage \
+RUN mkdir -p storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/logs \
+    bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html/storage \
     /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage \
     /var/www/html/bootstrap/cache
@@ -74,5 +65,9 @@ RUN sed -ri \
     /etc/apache2/apache2.conf \
     /etc/apache2/conf-available/*.conf
 
-# Render proporciona el puerto mediante $PORT
-CMD ["sh", "-c", "sed -i \"s/Listen 80/Listen ${PORT:-10000}/\" /etc/apache2/ports.conf && sed -i \"s/:80>/:${PORT:-10000}>/\" /etc/apache2/sites-available/000-default.conf && apache2-foreground"]
+# Arranque Render:
+# 1. limpiar caches
+# 2. crear enlace storage
+# 3. ejecutar migraciones de producción
+# 4. iniciar Apache
+CMD ["sh", "-c", "php artisan optimize:clear && php artisan storage:link || true; php artisan migrate --force; sed -i \"s/Listen 80/Listen ${PORT:-10000}/\" /etc/apache2/ports.conf; sed -i \"s/:80>/:${PORT:-10000}>/\" /etc/apache2/sites-available/000-default.conf; apache2-foreground"]
