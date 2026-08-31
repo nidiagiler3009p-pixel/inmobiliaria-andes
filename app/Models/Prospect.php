@@ -47,6 +47,10 @@ public function client()
 {
     return $this->hasOne(Client::class);
 }
+public function tramites()
+{
+    return $this->hasMany(Tramite::class, 'prospect_id');
+}
 
 }
 

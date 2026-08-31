@@ -6,22 +6,39 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-{
-    Schema::table('properties', function (Blueprint $table) {
-        // Agrega el campo para el nombre del dueño (opcional si deseas agregar también el teléfono)
-        $table->string('owner_name')->nullable()->after('title');
-        $table->string('owner_phone')->nullable()->after('owner_name'); // Opcional
-    });
-}
+    {
+        // Crear owner_name únicamente si todavía no existe.
+        if (!Schema::hasColumn('properties', 'owner_name')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->string('owner_name')
+                    ->nullable()
+                    ->after('title');
+            });
+        }
 
-public function down(): void
-{
-    Schema::table('properties', function (Blueprint $table) {
-        $table->dropColumn(['owner_name', 'owner_phone']);
-    });
-}
+        // Crear owner_phone únicamente si todavía no existe.
+        if (!Schema::hasColumn('properties', 'owner_phone')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->string('owner_phone')
+                    ->nullable()
+                    ->after('owner_name');
+            });
+        }
+    }
+
+    public function down(): void
+    {
+        if (Schema::hasColumn('properties', 'owner_phone')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->dropColumn('owner_phone');
+            });
+        }
+
+        if (Schema::hasColumn('properties', 'owner_name')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->dropColumn('owner_name');
+            });
+        }
+    }
 };

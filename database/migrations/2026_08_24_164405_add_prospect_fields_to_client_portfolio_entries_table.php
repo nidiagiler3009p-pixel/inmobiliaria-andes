@@ -8,38 +8,42 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('client_portfolio_entries', function (Blueprint $table) {
+        if (!Schema::hasColumn('client_portfolio_entries', 'prospect_name')) {
+            Schema::table('client_portfolio_entries', function (Blueprint $table) {
+                $table->string('prospect_name', 150)
+                    ->nullable()
+                    ->after('previous_status');
+            });
+        }
 
-            $table->string('prospect_name', 150)
-                ->nullable()
-                ->after('previous_status');
+        if (!Schema::hasColumn('client_portfolio_entries', 'prospect_last_name')) {
+            Schema::table('client_portfolio_entries', function (Blueprint $table) {
+                $table->string('prospect_last_name', 150)
+                    ->nullable()
+                    ->after('prospect_name');
+            });
+        }
 
-            $table->string('prospect_last_name', 150)
-                ->nullable()
-                ->after('prospect_name');
+        if (!Schema::hasColumn('client_portfolio_entries', 'prospect_phone')) {
+            Schema::table('client_portfolio_entries', function (Blueprint $table) {
+                $table->string('prospect_phone', 30)
+                    ->nullable()
+                    ->after('prospect_last_name');
+            });
+        }
 
-            $table->string('prospect_phone', 30)
-                ->nullable()
-                ->after('prospect_last_name');
-
-            $table->string('prospect_email', 255)
-                ->nullable()
-                ->after('prospect_phone');
-
-        });
+        if (!Schema::hasColumn('client_portfolio_entries', 'prospect_email')) {
+            Schema::table('client_portfolio_entries', function (Blueprint $table) {
+                $table->string('prospect_email', 255)
+                    ->nullable()
+                    ->after('prospect_phone');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('client_portfolio_entries', function (Blueprint $table) {
-
-            $table->dropColumn([
-                'prospect_name',
-                'prospect_last_name',
-                'prospect_phone',
-                'prospect_email',
-            ]);
-
-        });
+        // Se deja vacío porque estos campos ya existían
+        // antes de que esta migración quedara registrada.
     }
 };

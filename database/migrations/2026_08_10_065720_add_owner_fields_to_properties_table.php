@@ -8,18 +8,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('properties', function (Blueprint $table) {
-            $table->string('owner_name')->nullable();
-            $table->string('owner_phone')->nullable();
-            $table->string('owner_dni')->nullable();
-            $table->string('owner_email')->nullable();
-        });
+        if (!Schema::hasColumn('properties', 'owner_name')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->string('owner_name')->nullable();
+            });
+        }
+
+        if (!Schema::hasColumn('properties', 'owner_phone')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->string('owner_phone')->nullable();
+            });
+        }
+
+        if (!Schema::hasColumn('properties', 'owner_dni')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->string('owner_dni')->nullable();
+            });
+        }
+
+        if (!Schema::hasColumn('properties', 'owner_email')) {
+            Schema::table('properties', function (Blueprint $table) {
+                $table->string('owner_email')->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('properties', function (Blueprint $table) {
-            $table->dropColumn(['owner_name', 'owner_phone', 'owner_dni', 'owner_email']);
-        });
+        // Se deja vacío porque estas columnas ya existían
+        // antes de que esta migración quedara registrada.
     }
 };

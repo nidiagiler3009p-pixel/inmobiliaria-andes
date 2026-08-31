@@ -83,7 +83,7 @@
             <div>
                 <label class="block text-[9px] font-semibold text-[#1E392A] mb-1">Estado comercial *</label>
                 <select name="status" required class="w-full bg-white border border-[#D8D3C8] rounded-lg px-3 py-2 text-[10px]">
-                    @foreach(['Confirmada','Interesado','En Proceso','Cerrado Exitoso','Seguimiento Pendiente','Negociación','Vendida'] as $estado)
+                    @foreach(['Confirmada','Interesado','En Proceso','Negociación'] as $estado)
                         <option value="{{ $estado }}" {{ old('status', $client->status) === $estado ? 'selected' : '' }}>{{ $estado }}</option>
                     @endforeach
                 </select>
@@ -104,11 +104,16 @@
         </div>
 
         <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-[#D8D3C8]">
-           @php
+@php
     $cancelRoute = match (request('source_type')) {
-        'tramite', 'contact', 'advisory', 'integral' => route('admin.citas-totales'),
         'appointment' => route('gestion.citas'),
-        default => route('gestion.citas'),
+
+        'tramite',
+        'contact',
+        'advisory',
+        'integral' => route('admin.citas-totales'),
+
+        default => route('clients.index'),
     };
 @endphp
 

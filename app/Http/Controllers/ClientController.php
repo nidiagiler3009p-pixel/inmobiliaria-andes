@@ -8,15 +8,73 @@ use App\Models\User;
 use App\Models\Property;
 use App\Models\AppointmentTracking;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ClientController extends Controller
 {
     // Mostrar la lista de clientes en la Intranet
-    public function index()
-    {
-        $clients = Client::with('user')->latest()->paginate(10);
-        return view('intranet.clients.index', compact('clients'));
-    }
+public function index()
+{
+    $clients = Client::with([
+            'user',
+            'prospect',
+
+            'clientTramites' => function ($query) {
+                $query->whereIn('status', [
+                    'Pendiente',
+                    'En Proceso',
+                ])
+                ->latest();
+            },
+        ])
+
+        /*
+        |--------------------------------------------------------------------------
+        | SOLO CLIENTES QUE YA TRANSMUTARON
+        |--------------------------------------------------------------------------
+        |
+        | Ya no existe validación manual.
+        | "Confirmado" se asigna automáticamente al transmutar.
+        |
+        */
+        ->where('review_status', 'Confirmado')
+
+        /*
+        |--------------------------------------------------------------------------
+        | CLIENTES ACTIVOS
+        |--------------------------------------------------------------------------
+        */
+        ->whereIn('status', [
+            'Confirmada',
+            'Interesado',
+            'En Proceso',
+            'Negociación',
+        ])
+
+        /*
+        |--------------------------------------------------------------------------
+        | DEBE EXISTIR UN PROCESO EN CLIENTES / TRÁMITES
+        |--------------------------------------------------------------------------
+        |
+        | Esto evita que aparezcan clientes antiguos que no tienen un
+        | ClientTramite asociado.
+        |
+        */
+        ->whereHas('clientTramites', function ($query) {
+            $query->whereIn('status', [
+                'Pendiente',
+                'En Proceso',
+            ]);
+        })
+
+        ->latest()
+        ->paginate(10);
+
+    return view(
+        'intranet.clients.index',
+        compact('clients')
+    );
+}
 
     // Mostrar el formulario para registrar un nuevo cliente internamente
     public function create()
@@ -81,17 +139,22 @@ public function update(Request $request, Client $client)
             'nullable|string|max:3000',
     ]);
 
+
     /*
     |--------------------------------------------------------------------------
-    | DATOS TEMPORALES SI FALTAN CAMPOS OBLIGATORIOS
+    | DATOS TEMPORALES SI FALTAN CAMPOS
     |--------------------------------------------------------------------------
     */
 
     $email = trim((string) $request->email);
 
     if ($email === '') {
-        $email = 'prospecto-' . ($client->prospect_id ?? $client->id) . '@pendiente.local';
+        $email =
+            'prospecto-' .
+            ($client->prospect_id ?? $client->id) .
+            '@pendiente.local';
     }
+
 
     $identification = trim(
         (string) $request->identification_card
@@ -107,6 +170,7 @@ public function update(Request $request, Client $client)
                 STR_PAD_LEFT
             );
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -141,42 +205,35 @@ public function update(Request $request, Client $client)
     ]);
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | SI VENÍA DE CARTERA, RETIRARLO DE CARTERA
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $client->origin_module === 'Cartera' &&
+        !empty($client->prospect_id)
+    ) {
+        DB::table('client_portfolio_entries')
+            ->where('prospect_id', $client->prospect_id)
+            ->delete();
+    }
 
 
     /*
     |--------------------------------------------------------------------------
-    | VOLVER A LA FICHA
+    | SIEMPRE REGRESAR A CLIENTES / TRÁMITES
     |--------------------------------------------------------------------------
     */
 
-$sourceType = $request->input('source_type');
-$sourceId = $request->input('source_id');
-
-$url = route('clients.show', [
-    'client' => $client->id,
-]);
-
-if ($sourceType && $sourceId) {
-    $url .= '?' . http_build_query([
-        'source_type' => $sourceType,
-        'source_id' => $sourceId,
-    ]);
+    return redirect()
+        ->route('clients.index')
+        ->with(
+            'success',
+            'Datos del cliente actualizados correctamente.'
+        );
 }
-
-return redirect()
-    ->to($url)
-    ->with(
-        'success',
-        'Datos del cliente actualizados correctamente.'
-    
-    );
-}    // Eliminar un cliente de la base de datos
-    public function destroy(Client $client)
-    {
-        $client->delete();
-        return redirect()->route('clients.index')->with('success', 'Cliente eliminado de la base de datos.');
-    }
-
 public function edit(Client $client)
 {
     return view(
@@ -184,11 +241,14 @@ public function edit(Client $client)
         compact('client')
     );
 }
-public function confirmReview(Request $request, Client $client)
-{
+
+public function confirmReview(
+    Request $request,
+    Client $client
+) {
     /*
     |--------------------------------------------------------------------------
-    | 1. CONFIRMAR CLIENTE
+    | CONFIRMAR CLIENTE
     |--------------------------------------------------------------------------
     */
 
@@ -197,105 +257,104 @@ public function confirmReview(Request $request, Client $client)
         $client->save();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | 2. RECIBIR ORIGEN EXACTO
-    |--------------------------------------------------------------------------
-    */
-
-    $sourceType = $request->input('source_type');
-    $sourceId = $request->input('source_id');
 
     /*
     |--------------------------------------------------------------------------
-    | 3. SI VIENE DE UNA CITA
+    | MARCAR REGISTRO ORIGINAL COMO TRANSFERIDO
     |--------------------------------------------------------------------------
     */
 
-    if ($sourceType === 'appointment' && $sourceId) {
+    $sourceType =
+        $request->input('source_type');
 
-        $cita = AppointmentTracking::where('id', $sourceId)
-            ->where('client_id', $client->id)
-            ->first();
+    $sourceId =
+        $request->input('source_id');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ORIGEN: GESTIÓN DE CITAS
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        $sourceType === 'appointment' &&
+        $sourceId
+    ) {
+
+        $cita =
+            AppointmentTracking::find(
+                $sourceId
+            );
 
         if ($cita) {
 
-            if ($cita->status === 'Realizado') {
-                $cita->status = 'Transferido';
+            if (
+                in_array(
+                    $cita->status,
+                    [
+                        'Realizado',
+                        'Cancelado',
+                        'Confirmada',
+                        'Agendado'
+                    ]
+                )
+            ) {
+                $cita->status =
+                    'Transferido';
+
                 $cita->save();
             }
-
-            return redirect()
-                ->route('gestion.citas')
-                ->with(
-                    'success',
-                    'Cliente confirmado correctamente. La cita fue transmutada a Clientes / Trámites.'
-                );
         }
     }
 
-
-/*
-|--------------------------------------------------------------------------
-| 4. TRÁMITE EXACTO DESDE CITAS INTEGRALES
-|--------------------------------------------------------------------------
-*/
-
-if ($sourceType === 'tramite' && $sourceId) {
-
-    $tramite = Tramite::where('id', $sourceId)
-        ->where('prospect_id', $client->prospect_id)
-        ->first();
-
-    if ($tramite) {
-
-        if ($tramite->status === 'Completado') {
-            $tramite->status = 'Transferido';
-            $tramite->save();
-        }
-
-        return redirect()
-            ->route('admin.citas-totales')
-            ->with(
-                'success',
-                'Cliente confirmado correctamente. El trámite fue transmutado a Clientes.'
-            );
-    }
-}
 
     /*
     |--------------------------------------------------------------------------
-    | 4. CITAS INTEGRALES
+    | ORIGEN: CITAS INTEGRALES - TRÁMITE
     |--------------------------------------------------------------------------
     */
 
-    $origin = strtolower(
-        trim((string) $client->origin_module)
-    );
+    if (
+        $sourceType === 'tramite' &&
+        $sourceId
+    ) {
 
-    if (str_contains($origin, 'integral')) {
-        return redirect()
-            ->route('admin.citas-totales')
-            ->with(
-                'success',
-                'Cliente confirmado correctamente.'
+        $tramite =
+            Tramite::find(
+                $sourceId
             );
+
+        if ($tramite) {
+
+            if (
+                $tramite->status !==
+                'Transferido'
+            ) {
+
+                $tramite->status =
+                    'Transferido';
+
+                $tramite->save();
+            }
+        }
     }
+
 
     /*
     |--------------------------------------------------------------------------
-    | 5. OTROS ORÍGENES
+    | SIEMPRE REGRESAR A CLIENTES / TRÁMITES
     |--------------------------------------------------------------------------
     */
 
     return redirect()
-        ->route('clients.show', $client->id)
+        ->route('clients.index')
         ->with(
             'success',
             'Cliente confirmado correctamente.'
         );
 }
-    // Procesar el formulario público del catálogo, registrar el cliente, la cita y heredar el asesor de la propiedad
+// Procesar el formulario público del catálogo, registrar el cliente, la cita y heredar el asesor de la propiedad
     public function sendMessageAndCreateAppointment(Request $request)
     {
         $request->validate([

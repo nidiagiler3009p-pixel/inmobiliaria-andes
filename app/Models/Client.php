@@ -24,30 +24,39 @@ class Client extends Model
         'observations',
     ];
 
-    // Relación: Un cliente pertenece a un asesor (User)
+    // Un cliente pertenece a un asesor
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    // Relación: Un cliente puede tener varias citas o seguimientos
+    // Un cliente puede tener varias citas o seguimientos
     public function appointmentTrackings()
     {
         return $this->hasMany(AppointmentTracking::class);
     }
 
-    // Relación: Un cliente puede tener varios eventos en el calendario
+    // Un cliente puede tener varios eventos en el calendario
     public function schedules()
     {
         return $this->hasMany(Schedule::class);
     }
 
+    // Historial de entradas en Cartera
     public function portfolioEntries()
-{
-    return $this->hasMany(ClientPortfolioEntry::class);
-}
-public function prospect()
-{
-    return $this->belongsTo(Prospect::class);
-}
+    {
+        return $this->hasMany(ClientPortfolioEntry::class);
+    }
+
+    // Prospecto original relacionado
+    public function prospect()
+    {
+        return $this->belongsTo(Prospect::class);
+    }
+
+    // Procesos propios del módulo Clientes / Trámites
+    public function clientTramites()
+    {
+        return $this->hasMany(ClientTramite::class);
+    }
 }

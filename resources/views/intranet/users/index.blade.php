@@ -1,298 +1,1261 @@
 @extends('layouts.admin')
 
 @section('admin_content')
-<div class="max-w-7xl mx-auto space-y-8 pb-12">
-    
-    <!-- Encabezado de la Sección -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+
+@php
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESUMEN
+    |--------------------------------------------------------------------------
+    */
+
+    $totalPersonal = method_exists($users, 'total')
+        ? $users->total()
+        : $users->count();
+
+    $activos = \App\Models\User::where(function ($query) {
+        $query->whereRaw('LOWER(status) = ?', ['activo'])
+              ->orWhereNull('status');
+    })->count();
+
+    $inactivos = \App\Models\User::whereRaw('LOWER(status) = ?', ['inactivo'])
+        ->count();
+
+    $totalPostulantes = $jobApplications->count();
+
+    $metaDinero = \App\Models\User::sum('monthly_goal');
+
+@endphp
+
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+
+    {{-- ========================================================= --}}
+    {{-- ENCABEZADO --}}
+    {{-- ========================================================= --}}
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 mb-8">
+
         <div>
-            <h2 class="text-2xl font-extrabold text-[#2C4A3E]">Gestión Integral de Asesores</h2>
-            <p class="text-xs text-gray-500 mt-1">Control de rendimiento, comisiones, metas y administración del personal.</p>
+
+            <h1 class="text-3xl font-black text-gray-800">
+                Gestión Integral de Asesores
+            </h1>
+
+            <p class="text-gray-500 mt-1">
+                Administración del personal, metas y postulaciones.
+            </p>
+
         </div>
-        <div class="flex items-center gap-3">
-            <a href="#agregar-asesor" class="px-4 py-2 bg-[#2C4A3E] hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition shadow-sm">
-                <i class="fa-solid fa-user-plus mr-1"></i> Nuevo Asesor
-            </a>
-            <a href="#" class="px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold text-xs rounded-xl transition">
-                <i class="fa-solid fa-file-excel mr-1"></i> Exportar Reporte
-            </a>
-        </div>
+
+
+        <a href="{{ route('users.create') }}"
+           class="inline-flex items-center justify-center gap-2
+                  bg-emerald-600 hover:bg-emerald-700
+                  text-white font-black
+                  px-6 py-3 rounded-xl
+                  shadow-sm transition">
+
+            <i class="fa-solid fa-user-plus"></i>
+
+            Nuevo Asesor
+
+        </a>
+
     </div>
 
-    <!-- Alerta de éxito -->
+
+
+    {{-- ========================================================= --}}
+    {{-- MENSAJE DE ÉXITO --}}
+    {{-- ========================================================= --}}
+
     @if(session('success'))
-        <div class="p-4 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-2">
-            <i class="fa-solid fa-check-circle text-base"></i> 
-            <span>{{ session('success') }}</span>
+
+        <div class="mb-7 bg-emerald-50 border border-emerald-200
+                    text-emerald-700 rounded-2xl px-5 py-4
+                    flex items-center gap-3">
+
+            <i class="fa-solid fa-circle-check text-xl"></i>
+
+            <span class="font-semibold">
+                {{ session('success') }}
+            </span>
+
         </div>
+
     @endif
 
-    <!-- 1. Listado de Asesores -->
-    <div class="bg-white/90 backdrop-blur-md rounded-3xl border border-emerald-100 shadow-sm overflow-hidden p-6">
-        <h3 class="text-sm font-extrabold text-[#2C4A3E] mb-4 uppercase tracking-wider">Listado de Asesores</h3>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-emerald-50 text-[#2C4A3E] text-[11px] font-extrabold uppercase tracking-wider border-b border-emerald-100">
-                        <th class="p-3">Nombre</th>
-                        <th class="p-3">Cédula</th>
-                        <th class="p-3">Sucursal</th>
-                        <th class="p-3">Estado</th>
-                        <th class="p-3">Meta Mensual</th>
-                        <th class="p-3">Comisiones</th>
-                        <th class="p-3">Pagos Pendientes</th>
-                        <th class="p-3 text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-emerald-50 text-xs text-gray-700">
-                    @forelse($users as $user)
-                    <tr class="hover:bg-emerald-50/50 transition">
-                        <td class="p-3 font-extrabold text-[#2C4A3E]">{{ $user->name }} {{ $user->last_name }}</td>
-                        <td class="p-3 text-gray-500">{{ $user->phone ?? 'N/D' }}</td>
-                        <td class="p-3">{{ $user->city }}</td>
-                        <td class="p-3">
-                            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-900 rounded-full text-[10px] font-extrabold">Activo</span>
-                        </td>
-                        <td class="p-3 font-bold text-emerald-800">${{ number_format($user->monthly_goal, 0) }}</td>
-                        <td class="p-3 font-bold">$12,500</td>
-                        <td class="p-3 font-bold text-amber-700">$1,500</td>
-                        <td class="p-3 text-center">
-                            <div class="inline-flex items-center gap-1.5">
-                                <a href="{{ route('users.show', $user->id) }}" class="p-1.5 bg-gray-100 hover:bg-emerald-100 text-[#2C4A3E] rounded-lg transition" title="Ver"><i class="fa-solid fa-eye"></i></a>
-                                <a href="{{ route('users.edit', $user->id) }}" class="p-1.5 bg-gray-100 hover:bg-emerald-100 text-[#2C4A3E] rounded-lg transition" title="Editar"><i class="fa-solid fa-pen"></i></a>
-                                <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('¿Eliminar asesor?');" class="inline">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="8" class="p-6 text-center text-gray-400">No hay asesores registrados.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+
+
+    {{-- ========================================================= --}}
+    {{-- CUADROS DE RESUMEN --}}
+    {{-- ========================================================= --}}
+
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+
+
+        {{-- TOTAL PERSONAL --}}
+
+        <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+
+            <div class="flex items-center justify-between mb-3">
+
+                <div class="w-10 h-10 rounded-xl bg-blue-50
+                            text-blue-600 flex items-center justify-center">
+
+                    <i class="fa-solid fa-users"></i>
+
+                </div>
+
+            </div>
+
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Total Personal
+            </p>
+
+            <p class="text-2xl font-black text-gray-800 mt-1">
+                {{ $totalPersonal }}
+            </p>
+
         </div>
+
+
+
+        {{-- ACTIVOS --}}
+
+        <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+
+            <div class="w-10 h-10 rounded-xl bg-emerald-50
+                        text-emerald-600 flex items-center justify-center mb-3">
+
+                <i class="fa-solid fa-user-check"></i>
+
+            </div>
+
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Activos
+            </p>
+
+            <p class="text-2xl font-black text-emerald-600 mt-1">
+                {{ $activos }}
+            </p>
+
+        </div>
+
+
+
+        {{-- INACTIVOS --}}
+
+        <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+
+            <div class="w-10 h-10 rounded-xl bg-gray-100
+                        text-gray-600 flex items-center justify-center mb-3">
+
+                <i class="fa-solid fa-user-slash"></i>
+
+            </div>
+
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Inactivos
+            </p>
+
+            <p class="text-2xl font-black text-gray-700 mt-1">
+                {{ $inactivos }}
+            </p>
+
+        </div>
+
+
+
+        {{-- POSTULANTES --}}
+
+        <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+
+            <div class="w-10 h-10 rounded-xl bg-amber-50
+                        text-amber-600 flex items-center justify-center mb-3">
+
+                <i class="fa-solid fa-file-signature"></i>
+
+            </div>
+
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Postulantes
+            </p>
+
+            <p class="text-2xl font-black text-amber-600 mt-1">
+                {{ $totalPostulantes }}
+            </p>
+
+        </div>
+
+
+
+        {{-- META PROPIEDADES --}}
+
+        <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+
+            <div class="w-10 h-10 rounded-xl bg-violet-50
+                        text-violet-600 flex items-center justify-center mb-3">
+
+                <i class="fa-solid fa-house-circle-check"></i>
+
+            </div>
+
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Meta Propiedades
+            </p>
+
+            <p class="text-2xl font-black text-gray-800 mt-1">
+                —
+            </p>
+
+            <p class="text-[11px] text-gray-400 mt-1">
+                Propiedades a vender
+            </p>
+
+        </div>
+
+
+
+        {{-- META ECONÓMICA --}}
+
+        <div class="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+
+            <div class="w-10 h-10 rounded-xl bg-green-50
+                        text-green-600 flex items-center justify-center mb-3">
+
+                <i class="fa-solid fa-dollar-sign"></i>
+
+            </div>
+
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-400">
+                Meta $
+            </p>
+
+            <p class="text-xl font-black text-green-600 mt-1">
+
+                ${{ number_format((float) $metaDinero, 2) }}
+
+            </p>
+
+            <p class="text-[11px] text-gray-400 mt-1">
+                Meta económica mensual
+            </p>
+
+        </div>
+
     </div>
 
-    <!-- 2. Control de Metas, Rendimiento y Estadísticas -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm">
-                <span class="text-[11px] text-gray-400 font-bold uppercase">Total Ventas Mensuales</span>
-                <h4 class="text-xl font-extrabold text-[#2C4A3E] mt-1">$48,500</h4>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm">
-                <span class="text-[11px] text-gray-400 font-bold uppercase">Total Cieres</span>
-                <h4 class="text-xl font-extrabold text-[#2C4A3E] mt-1">12</h4>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm">
-                <span class="text-[11px] text-gray-400 font-bold uppercase">Eficiencia de Conversión</span>
-                <h4 class="text-xl font-extrabold text-[#2C4A3E] mt-1">65%</h4>
-            </div>
-            <div class="bg-white p-5 rounded-3xl border border-emerald-100 shadow-sm">
-                <span class="text-[11px] text-gray-400 font-bold uppercase">Bono Alcanzado</span>
-                <h4 class="text-xl font-extrabold text-emerald-800 mt-1">$5,000</h4>
-            </div>
-        </div>
-    </div>
 
-    <!-- 3. Comisiones y Pagos -->
-    <div class="bg-white/90 backdrop-blur-md rounded-3xl border border-emerald-100 shadow-sm p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-sm font-extrabold text-[#2C4A3E] uppercase tracking-wider">Comisiones y Pagos</h3>
-            <div class="flex gap-2">
-                <button class="px-3 py-1 bg-emerald-800 text-white text-[11px] font-bold rounded-xl">Generar Pagos</button>
-                <button class="px-3 py-1 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-xl">Auditoría de Cuentas</button>
+
+    {{-- ========================================================= --}}
+    {{-- TABLA PERSONAL / ASESORES --}}
+    {{-- ========================================================= --}}
+
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-10">
+
+
+        <div class="px-6 py-5 border-b border-gray-100
+                    flex flex-col md:flex-row
+                    md:items-center md:justify-between gap-2">
+
+            <div>
+
+                <h2 class="text-xl font-black text-gray-800">
+
+                    <i class="fa-solid fa-user-tie text-emerald-600 mr-2"></i>
+
+                    Personal Registrado
+
+                </h2>
+
+                <p class="text-sm text-gray-500 mt-1">
+                    Asesores y miembros registrados en la intranet.
+                </p>
+
             </div>
+
         </div>
+
+
+
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                    <tr class="bg-emerald-50 text-[#2C4A3E] font-extrabold uppercase text-[10px]">
-                        <th class="p-3">Período</th>
-                        <th class="p-3">Asesor</th>
-                        <th class="p-3">Ventas Totales</th>
-                        <th class="p-3">Tasa de Comisión (%)</th>
-                        <th class="p-3">Monto de Comisión</th>
-                        <th class="p-3">Estado de Pago</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-emerald-50 text-gray-700">
+
+            <table class="w-full text-sm">
+
+
+                <thead class="bg-gray-50 text-gray-500">
+
                     <tr>
-                        <td class="p-3">Q3 2026</td>
-                        <td class="p-3 font-bold">David Cueva</td>
-                        <td class="p-3">$246,790</td>
-                        <td class="p-3">15.0%</td>
-                        <td class="p-3 font-bold text-emerald-800">$10,500</td>
-                        <td class="p-3"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-full font-bold text-[10px]">Pagado</span></td>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Personal
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Contacto
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Sucursal
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Rol
+                        </th>
+
+                        <th class="px-5 py-4 text-center font-black">
+                            Estado
+                        </th>
+
+                        <th class="px-5 py-4 text-right font-black">
+                            Meta $
+                        </th>
+
+                        <th class="px-5 py-4 text-center font-black">
+                            Acciones
+                        </th>
+
                     </tr>
+
+                </thead>
+
+
+
+                <tbody class="divide-y divide-gray-100">
+
+
+                    @forelse($users as $user)
+
+                        @php
+
+                            $estadoUsuario = strtolower(
+                                trim((string) ($user->status ?? 'activo'))
+                            );
+
+                            $estaActivo = $estadoUsuario !== 'inactivo';
+
+                            $nombreCompleto = trim(
+                                ($user->name ?? '') . ' ' .
+                                ($user->last_name ?? '')
+                            );
+
+                        @endphp
+
+
+                        <tr class="hover:bg-gray-50/70 transition">
+
+
+                            {{-- PERSONAL --}}
+
+                            <td class="px-5 py-4">
+
+                                <div class="flex items-center gap-3">
+
+                                    <div class="w-10 h-10 rounded-xl
+                                                bg-emerald-100
+                                                text-emerald-700
+                                                flex items-center justify-center
+                                                font-black">
+
+                                        {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <p class="font-black text-gray-800">
+                                            {{ $nombreCompleto ?: 'Sin nombre' }}
+                                        </p>
+
+                                        <p class="text-xs text-gray-400">
+                                            {{ $user->profession ?: 'Sin profesión registrada' }}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            </td>
+
+
+
+                            {{-- CONTACTO --}}
+
+                            <td class="px-5 py-4">
+
+                                <p class="font-semibold text-gray-700">
+                                    {{ $user->email }}
+                                </p>
+
+                                <p class="text-xs text-gray-400 mt-1">
+                                    {{ $user->phone ?: 'Sin teléfono' }}
+                                </p>
+
+                            </td>
+
+
+
+                            {{-- SUCURSAL --}}
+
+                            <td class="px-5 py-4 text-gray-600">
+
+                                {{ $user->branch ?: ($user->city ?: 'N/D') }}
+
+                            </td>
+
+
+
+                            {{-- ROL --}}
+
+                            <td class="px-5 py-4">
+
+                                <span class="inline-flex px-3 py-1 rounded-lg
+                                             bg-blue-50 text-blue-700
+                                             text-xs font-bold">
+
+                                    {{ $user->role ?: 'Sin rol' }}
+
+                                </span>
+
+                            </td>
+
+
+
+                            {{-- ESTADO --}}
+
+                            <td class="px-5 py-4 text-center">
+
+                                @if($estaActivo)
+
+                                    <span class="inline-flex items-center gap-2
+                                                 bg-emerald-50 text-emerald-700
+                                                 px-3 py-1.5 rounded-full
+                                                 text-xs font-black">
+
+                                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+
+                                        Activo
+
+                                    </span>
+
+                                @else
+
+                                    <span class="inline-flex items-center gap-2
+                                                 bg-gray-100 text-gray-600
+                                                 px-3 py-1.5 rounded-full
+                                                 text-xs font-black">
+
+                                        <span class="w-2 h-2 bg-gray-500 rounded-full"></span>
+
+                                        Inactivo
+
+                                    </span>
+
+                                @endif
+
+                            </td>
+
+
+
+                            {{-- META DINERO --}}
+
+                            <td class="px-5 py-4 text-right">
+
+                                <span class="font-black text-gray-800">
+
+                                    ${{ number_format(
+                                        (float) ($user->monthly_goal ?? 0),
+                                        2
+                                    ) }}
+
+                                </span>
+
+                            </td>
+
+
+
+                            {{-- ACCIONES --}}
+
+                            <td class="px-5 py-4">
+
+                                <div class="flex items-center justify-center gap-2">
+
+
+                                    {{-- VER --}}
+
+                                    <a href="{{ route('users.show', $user->id) }}"
+                                       title="Ver perfil"
+                                       class="w-9 h-9 rounded-xl
+                                              bg-blue-50 text-blue-600
+                                              hover:bg-blue-600 hover:text-white
+                                              flex items-center justify-center
+                                              transition">
+
+                                        <i class="fa-solid fa-eye"></i>
+
+                                    </a>
+
+
+
+                                    {{-- EDITAR --}}
+
+                                    <button
+                                        type="button"
+
+                                        onclick="abrirEditar(
+                                            @js(route('users.edit', $user->id)),
+                                            @js($nombreCompleto)
+                                        )"
+
+                                        title="Modificar"
+
+                                        class="w-9 h-9 rounded-xl
+                                               bg-amber-50 text-amber-600
+                                               hover:bg-amber-500 hover:text-white
+                                               flex items-center justify-center
+                                               transition">
+
+                                        <i class="fa-solid fa-pen"></i>
+
+                                    </button>
+
+
+
+                                    {{-- ACTIVAR / DESACTIVAR --}}
+
+                                    <button
+                                        type="button"
+
+                                        onclick="abrirEstado(
+                                            @js(route('users.destroy', $user->id)),
+                                            @js($nombreCompleto),
+                                            @js($estaActivo ? 'desactivar' : 'activar')
+                                        )"
+
+                                        title="{{ $estaActivo ? 'Desactivar' : 'Activar' }}"
+
+                                        class="w-9 h-9 rounded-xl
+                                               {{ $estaActivo
+                                                    ? 'bg-red-50 text-red-600 hover:bg-red-600'
+                                                    : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600'
+                                               }}
+                                               hover:text-white
+                                               flex items-center justify-center
+                                               transition">
+
+                                        @if($estaActivo)
+
+                                            <i class="fa-solid fa-user-slash"></i>
+
+                                        @else
+
+                                            <i class="fa-solid fa-user-check"></i>
+
+                                        @endif
+
+                                    </button>
+
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+
+                    @empty
+
+
+                        <tr>
+
+                            <td colspan="7"
+                                class="px-6 py-12 text-center text-gray-400">
+
+                                <i class="fa-solid fa-users
+                                          text-4xl mb-3 block"></i>
+
+                                No existen miembros registrados.
+
+                            </td>
+
+                        </tr>
+
+
+                    @endforelse
+
+
                 </tbody>
+
             </table>
+
         </div>
+
+
+
+        {{-- PAGINACIÓN --}}
+
+        @if(method_exists($users, 'links'))
+
+            <div class="px-6 py-4 border-t border-gray-100">
+
+                {{ $users->links() }}
+
+            </div>
+
+        @endif
+
+
     </div>
 
-    <!-- 4. Formularios de Gestión (Agregar Nuevo Asesor y Modificar) -->
-    <div id="agregar-asesor" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/90 backdrop-blur-md rounded-3xl border border-emerald-100 shadow-sm p-6">
-        
-        <!-- Formulario: Agregar Nuevo Asesor -->
-        <div>
-            <h3 class="text-sm font-extrabold text-[#2C4A3E] mb-4 uppercase tracking-wider">Agregar Nuevo Asesor</h3>
-            <form action="{{ route('users.store') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
-                @csrf
+
+
+    {{-- ========================================================= --}}
+    {{-- TABLA POSTULANTES --}}
+    {{-- ========================================================= --}}
+
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+
+
+        <div class="px-6 py-5 border-b border-gray-100">
+
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
                 <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Nombre</label>
-                    <input type="text" name="name" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
+
+                    <h2 class="text-xl font-black text-gray-800">
+
+                        <i class="fa-solid fa-file-lines
+                                  text-amber-500 mr-2"></i>
+
+                        Postulantes
+
+                    </h2>
+
+                    <p class="text-sm text-gray-500 mt-1">
+
+                        Solicitudes recibidas desde
+                        <strong>Únete a nuestro equipo</strong>
+                        de la página pública.
+
+                    </p>
+
                 </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Apellido</label>
-                    <input type="text" name="last_name" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
+
+
+                <div class="px-4 py-2
+                            bg-amber-50 text-amber-700
+                            rounded-xl font-black text-sm">
+
+                    {{ $totalPostulantes }}
+                    {{ $totalPostulantes == 1 ? 'postulante' : 'postulantes' }}
+
                 </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Email</label>
-                    <input type="email" name="email" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Contraseña Inicial</label>
-                    <input type="password" name="password" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Teléfono</label>
-                        <input type="text" name="phone" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Ciudad / Sucursal</label>
-                        <input type="text" name="city" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Profesión</label>
-                        <input type="text" name="profession" value="Asesor" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Experiencia</label>
-                        <input type="text" name="experience_years" value="1 año" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Meta Mensual ($)</label>
-                        <input type="number" name="monthly_goal" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Rol</label>
-                        <select name="role" required class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]">
-                            <option value="Asesor">Asesor</option>
-                            <option value="Administrador/Gerente">Administrador/Gerente</option>
-                            <option value="Contador">Contador</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Hoja de Vida (PDF)</label>
-                    <input type="file" name="cv_file" accept=".pdf" class="w-full text-xs text-gray-500">
-                </div>
-                <div class="flex gap-2 pt-2">
-                    <button type="submit" class="flex-1 py-2.5 bg-[#2C4A3E] hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition">Guardar</button>
-                    <button type="reset" class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs rounded-xl transition">Limpiar</button>
-                </div>
-            </form>
+
+            </div>
+
         </div>
 
-        <!-- Formulario: Modificar Datos del Asesor -->
-        <div>
-            <h3 class="text-sm font-extrabold text-[#2C4A3E] mb-4 uppercase tracking-wider">Modificar Datos del Asesor</h3>
-            
-            <form id="form-modificar" action="" method="POST" class="space-y-3">
-                @csrf
-                @method('PUT')
 
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Seleccionar Asesor</label>
-                    <select id="select-asesor" class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-[#FDFBF7]" onchange="cargarDatosAsesor(this)">
-                        <option value="">Seleccione un asesor...</option>
-                        @foreach($users as $u)
-                            <option value="{{ $u->id }}" 
-                                    data-email="{{ $u->email }}" 
-                                    data-phone="{{ $u->phone }}" 
-                                    data-goal="{{ $u->monthly_goal }}"
-                                    data-updateurl="{{ route('users.update', $u->id) }}">
-                                {{ $u->name }} {{ $u->last_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
 
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Email</label>
-                    <input type="email" id="mod_email" disabled class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-gray-100" placeholder="Seleccione un asesor...">
-                </div>
+        <div class="overflow-x-auto">
 
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Teléfono</label>
-                    <input type="text" id="mod_phone" disabled class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-gray-100">
-                </div>
+            <table class="w-full text-sm">
 
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Meta Mensual</label>
-                    <input type="number" id="mod_goal" disabled class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-gray-100">
-                </div>
 
-                <div>
-                    <label class="block text-[11px] font-bold text-[#2C4A3E] mb-1">Estado</label>
-                    <input type="text" id="mod_estado" value="Activo" disabled class="w-full px-3 py-2 rounded-xl border border-emerald-200 text-xs bg-gray-100">
-                </div>
+                <thead class="bg-gray-50 text-gray-500">
 
-                <div class="flex gap-2 pt-6">
-                    <button type="submit" id="btn-actualizar" disabled class="flex-1 py-2.5 bg-gray-300 text-white font-bold text-xs rounded-xl cursor-not-allowed transition">Actualizar</button>
-                    <button type="button" onclick="limpiarModificar()" class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs rounded-xl transition">Limpiar</button>
-                </div>
-            </form>
+                    <tr>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Postulante
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Contacto
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Profesión
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Ciudad
+                        </th>
+
+                        <th class="px-5 py-4 text-left font-black">
+                            Experiencia
+                        </th>
+
+                        <th class="px-5 py-4 text-center font-black">
+                            CV
+                        </th>
+
+                        <th class="px-5 py-4 text-center font-black">
+                            Fecha
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+
+                <tbody class="divide-y divide-gray-100">
+
+
+                    @forelse($jobApplications as $postulante)
+
+
+                        <tr class="hover:bg-gray-50/70 transition">
+
+
+                            {{-- NOMBRE --}}
+
+                            <td class="px-5 py-4">
+
+                                <div class="flex items-center gap-3">
+
+                                    <div class="w-10 h-10
+                                                rounded-xl
+                                                bg-amber-100
+                                                text-amber-700
+                                                flex items-center
+                                                justify-center
+                                                font-black">
+
+                                        {{ strtoupper(
+                                            substr(
+                                                $postulante->nombres ?? 'P',
+                                                0,
+                                                1
+                                            )
+                                        ) }}
+
+                                    </div>
+
+
+                                    <div>
+
+                                        <p class="font-black text-gray-800">
+
+                                            {{ $postulante->nombres }}
+                                            {{ $postulante->apellidos }}
+
+                                        </p>
+
+                                        <p class="text-xs text-gray-400">
+                                            Postulación web
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            </td>
+
+
+
+                            {{-- CONTACTO --}}
+
+                            <td class="px-5 py-4">
+
+                                <p class="font-semibold text-gray-700">
+                                    {{ $postulante->correo }}
+                                </p>
+
+                                <p class="text-xs text-gray-400 mt-1">
+                                    {{ $postulante->celular ?: 'Sin celular' }}
+                                </p>
+
+                            </td>
+
+
+
+                            {{-- PROFESIÓN --}}
+
+                            <td class="px-5 py-4 text-gray-700">
+
+                                {{ $postulante->profesion ?: 'N/D' }}
+
+                            </td>
+
+
+
+                            {{-- CIUDAD --}}
+
+                            <td class="px-5 py-4 text-gray-600">
+
+                                {{ $postulante->ciudad ?: 'N/D' }}
+
+                            </td>
+
+
+
+                            {{-- EXPERIENCIA --}}
+
+                            <td class="px-5 py-4 text-gray-600">
+
+                                {{ $postulante->experiencia ?: 'N/D' }}
+
+                            </td>
+
+
+
+                            {{-- CV --}}
+
+                            <td class="px-5 py-4 text-center">
+
+                                @if($postulante->cv_path)
+
+                                    <a
+                                        href="{{ asset('storage/' . $postulante->cv_path) }}"
+                                        target="_blank"
+
+                                        class="inline-flex items-center gap-2
+                                               bg-red-50 text-red-600
+                                               hover:bg-red-600 hover:text-white
+                                               px-3 py-2 rounded-xl
+                                               text-xs font-black
+                                               transition"
+                                    >
+
+                                        <i class="fa-solid fa-file-pdf"></i>
+
+                                        Ver CV
+
+                                    </a>
+
+                                @else
+
+                                    <span class="text-gray-400 text-xs">
+                                        Sin CV
+                                    </span>
+
+                                @endif
+
+                            </td>
+
+
+
+                            {{-- FECHA --}}
+
+                            <td class="px-5 py-4 text-center text-gray-500">
+
+                                {{ optional($postulante->created_at)->format('d/m/Y') ?? 'N/D' }}
+
+                            </td>
+
+
+                        </tr>
+
+
+                    @empty
+
+
+                        <tr>
+
+                            <td colspan="7"
+                                class="px-6 py-12 text-center text-gray-400">
+
+                                <i class="fa-solid fa-file-circle-xmark
+                                          text-4xl mb-3 block"></i>
+
+                                No existen postulaciones registradas.
+
+                            </td>
+
+                        </tr>
+
+
+                    @endforelse
+
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+
+{{-- ============================================================= --}}
+{{-- MODAL CONFIRMAR EDICIÓN --}}
+{{-- ============================================================= --}}
+
+<div id="modal-editar"
+     class="fixed inset-0 z-50 hidden
+            items-center justify-center
+            bg-black/50 px-4">
+
+    <div class="bg-white rounded-3xl
+                shadow-2xl
+                w-full max-w-md
+                p-7">
+
+
+        <div class="w-14 h-14
+                    mx-auto mb-4
+                    rounded-2xl
+                    bg-amber-100
+                    text-amber-600
+                    flex items-center justify-center
+                    text-2xl">
+
+            <i class="fa-solid fa-pen-to-square"></i>
+
+        </div>
+
+
+        <h3 class="text-xl font-black text-gray-800 text-center">
+
+            Modificar Asesor
+
+        </h3>
+
+
+        <p class="text-gray-500 text-center mt-3">
+
+            ¿Deseas modificar la información de
+
+            <strong id="nombre-editar"
+                    class="text-gray-800"></strong>?
+
+        </p>
+
+
+        <div class="flex gap-3 mt-7">
+
+            <button
+                type="button"
+                onclick="cerrarEditar()"
+
+                class="flex-1 px-4 py-3
+                       rounded-xl
+                       bg-gray-100
+                       text-gray-700
+                       font-black
+                       hover:bg-gray-200 transition"
+            >
+
+                No, regresar
+
+            </button>
+
+
+            <a
+                id="enlace-editar"
+                href="#"
+
+                class="flex-1 px-4 py-3
+                       rounded-xl
+                       bg-amber-500
+                       text-white
+                       font-black
+                       text-center
+                       hover:bg-amber-600 transition"
+            >
+
+                Sí, modificar
+
+            </a>
+
         </div>
 
     </div>
 
 </div>
-@endsection
 
-<!-- Script dinámico para el autocompletado del formulario de modificación -->
+
+
+{{-- ============================================================= --}}
+{{-- MODAL ACTIVAR / DESACTIVAR --}}
+{{-- ============================================================= --}}
+
+<div id="modal-estado"
+     class="fixed inset-0 z-50 hidden
+            items-center justify-center
+            bg-black/50 px-4">
+
+    <div class="bg-white rounded-3xl
+                shadow-2xl
+                w-full max-w-md
+                p-7">
+
+
+        <div id="icono-estado"
+             class="w-14 h-14
+                    mx-auto mb-4
+                    rounded-2xl
+                    bg-red-100
+                    text-red-600
+                    flex items-center justify-center
+                    text-2xl">
+
+            <i class="fa-solid fa-user-slash"></i>
+
+        </div>
+
+
+        <h3 id="titulo-estado"
+            class="text-xl font-black
+                   text-gray-800 text-center">
+
+            Desactivar Usuario
+
+        </h3>
+
+
+        <p class="text-gray-500 text-center mt-3">
+
+            ¿Deseas
+
+            <strong id="accion-estado"></strong>
+
+            a
+
+            <strong id="nombre-estado"
+                    class="text-gray-800"></strong>?
+
+        </p>
+
+
+        <p id="mensaje-estado"
+           class="text-xs
+                  text-gray-400
+                  text-center mt-2">
+
+            El usuario permanecerá registrado en el sistema.
+
+        </p>
+
+
+        <form id="form-estado"
+              method="POST"
+              class="mt-7">
+
+            @csrf
+            @method('DELETE')
+
+
+            <div class="flex gap-3">
+
+                <button
+                    type="button"
+                    onclick="cerrarEstado()"
+
+                    class="flex-1 px-4 py-3
+                           rounded-xl
+                           bg-gray-100
+                           text-gray-700
+                           font-black
+                           hover:bg-gray-200 transition"
+                >
+
+                    No, regresar
+
+                </button>
+
+
+                <button
+                    id="boton-confirmar-estado"
+                    type="submit"
+
+                    class="flex-1 px-4 py-3
+                           rounded-xl
+                           bg-red-600
+                           text-white
+                           font-black
+                           hover:bg-red-700 transition"
+                >
+
+                    Sí, desactivar
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+{{-- ============================================================= --}}
+{{-- JAVASCRIPT --}}
+{{-- ============================================================= --}}
+
 <script>
-function cargarDatosAsesor(select) {
-    const option = select.options[select.selectedIndex];
-    const email = option.getAttribute('data-email');
-    const phone = option.getAttribute('data-phone');
-    const goal = option.getAttribute('data-goal');
-    const updateUrl = option.getAttribute('data-updateurl');
 
-    const btnActualizar = document.getElementById('btn-actualizar');
-    const formModificar = document.getElementById('form-modificar');
+    /*
+    |--------------------------------------------------------------------------
+    | MODAL EDITAR
+    |--------------------------------------------------------------------------
+    */
 
-    if (select.value) {
-        document.getElementById('mod_email').value = email || '';
-        document.getElementById('mod_phone').value = phone || '';
-        document.getElementById('mod_goal').value = goal || '';
-        
-        formModificar.action = updateUrl;
-        
-        btnActualizar.disabled = false;
-        btnActualizar.classList.remove('bg-gray-300', 'cursor-not-allowed');
-        btnActualizar.classList.add('bg-[#2C4A3E]', 'hover:bg-emerald-800');
-    } else {
-        limpiarModificar();
+    function abrirEditar(url, nombre)
+    {
+        document.getElementById('nombre-editar').textContent = nombre;
+
+        document.getElementById('enlace-editar').href = url;
+
+
+        const modal =
+            document.getElementById('modal-editar');
+
+
+        modal.classList.remove('hidden');
+
+        modal.classList.add('flex');
     }
-}
 
-function limpiarModificar() {
-    document.getElementById('select-asesor').value = '';
-    document.getElementById('mod_email').value = '';
-    document.getElementById('mod_phone').value = '';
-    document.getElementById('mod_goal').value = '';
-    
-    const btnActualizar = document.getElementById('btn-actualizar');
-    btnActualizar.disabled = true;
-    btnActualizar.classList.add('bg-gray-300', 'cursor-not-allowed');
-    btnActualizar.classList.remove('bg-[#2C4A3E]', 'hover:bg-emerald-800');
-}
+
+    function cerrarEditar()
+    {
+        const modal =
+            document.getElementById('modal-editar');
+
+
+        modal.classList.add('hidden');
+
+        modal.classList.remove('flex');
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MODAL ESTADO
+    |--------------------------------------------------------------------------
+    */
+
+    function abrirEstado(url, nombre, accion)
+    {
+        const modal =
+            document.getElementById('modal-estado');
+
+        const form =
+            document.getElementById('form-estado');
+
+        const titulo =
+            document.getElementById('titulo-estado');
+
+        const accionTexto =
+            document.getElementById('accion-estado');
+
+        const nombreTexto =
+            document.getElementById('nombre-estado');
+
+        const boton =
+            document.getElementById('boton-confirmar-estado');
+
+        const icono =
+            document.getElementById('icono-estado');
+
+
+        form.action = url;
+
+        nombreTexto.textContent = nombre;
+
+        accionTexto.textContent = accion;
+
+
+        if (accion === 'desactivar')
+        {
+            titulo.textContent =
+                'Desactivar Usuario';
+
+            boton.textContent =
+                'Sí, desactivar';
+
+
+            boton.className =
+                'flex-1 px-4 py-3 rounded-xl ' +
+                'bg-red-600 text-white font-black ' +
+                'hover:bg-red-700 transition';
+
+
+            icono.className =
+                'w-14 h-14 mx-auto mb-4 rounded-2xl ' +
+                'bg-red-100 text-red-600 ' +
+                'flex items-center justify-center text-2xl';
+
+
+            icono.innerHTML =
+                '<i class="fa-solid fa-user-slash"></i>';
+        }
+        else
+        {
+            titulo.textContent =
+                'Activar Usuario';
+
+            boton.textContent =
+                'Sí, activar';
+
+
+            boton.className =
+                'flex-1 px-4 py-3 rounded-xl ' +
+                'bg-emerald-600 text-white font-black ' +
+                'hover:bg-emerald-700 transition';
+
+
+            icono.className =
+                'w-14 h-14 mx-auto mb-4 rounded-2xl ' +
+                'bg-emerald-100 text-emerald-600 ' +
+                'flex items-center justify-center text-2xl';
+
+
+            icono.innerHTML =
+                '<i class="fa-solid fa-user-check"></i>';
+        }
+
+
+        modal.classList.remove('hidden');
+
+        modal.classList.add('flex');
+    }
+
+
+    function cerrarEstado()
+    {
+        const modal =
+            document.getElementById('modal-estado');
+
+
+        modal.classList.add('hidden');
+
+        modal.classList.remove('flex');
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CERRAR MODALES CON ESC
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener('keydown', function(event)
+    {
+        if (event.key === 'Escape')
+        {
+            cerrarEditar();
+
+            cerrarEstado();
+        }
+    });
+
 </script>
+
+@endsection

@@ -22,17 +22,116 @@
         @csrf
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-bold text-[#2C4A3E]">
-            
-            <!-- 1. Clasificación y Gestión Interna -->
-            <div class="md:col-span-2">
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Asesor Responsable / Asignado</label>
-                <select name="user_id" required class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
-                    <option value="">Seleccione un asesor...</option>
-                    @foreach($asesores as $asesor)
-                        <option value="{{ $asesor->id }}" {{ old('user_id') == $asesor->id ? 'selected' : '' }}>{{ $asesor->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+<!-- 1. Clasificación y Gestión Comercial -->
+<div class="md:col-span-2 pt-1">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase">
+                <i class="fa-solid fa-briefcase mr-2"></i>
+                Gestión Comercial
+            </h3>
+            <p class="text-[10px] text-gray-400 font-medium mt-1">
+                Define cómo ingresó la propiedad y quién será responsable de su comercialización.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Origen de captación -->
+<div>
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">
+        Origen de Captación
+    </label>
+
+    <select
+        name="capture_origin"
+        id="capture_origin"
+        required
+        onchange="toggleCapturingAdvisor()"
+        class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+    >
+        <option
+            value="agency"
+            {{ old('capture_origin', 'agency') === 'agency' ? 'selected' : '' }}
+        >
+            Inmobiliaria
+        </option>
+
+        <option
+            value="advisor"
+            {{ old('capture_origin') === 'advisor' ? 'selected' : '' }}
+        >
+            Asesor
+        </option>
+    </select>
+
+    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+        Indica quién consiguió originalmente la propiedad.
+    </p>
+</div>
+
+<!-- Asesor captador -->
+<div
+    id="capturing_advisor_container"
+    class="{{ old('capture_origin', 'agency') === 'advisor' ? '' : 'hidden' }}"
+>
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">
+        Asesor Captador
+    </label>
+
+    <select
+        name="capturing_advisor_id"
+        id="capturing_advisor_id"
+        class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+    >
+        <option value="">
+            Seleccione el asesor que captó la propiedad...
+        </option>
+
+        @foreach($asesores as $asesor)
+            <option
+                value="{{ $asesor->id }}"
+                {{ old('capturing_advisor_id') == $asesor->id ? 'selected' : '' }}
+            >
+                {{ $asesor->name }}
+            </option>
+        @endforeach
+    </select>
+
+    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+        Solo aplica cuando la propiedad fue captada directamente por un asesor.
+    </p>
+</div>
+
+<!-- Asesor responsable / vendedor -->
+<div class="md:col-span-2">
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">
+        Asesor Responsable / Asignado
+    </label>
+
+    <select
+        name="user_id"
+        required
+        class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+    >
+        <option value="">
+            Seleccione el asesor responsable...
+        </option>
+
+        @foreach($asesores as $asesor)
+            <option
+                value="{{ $asesor->id }}"
+                {{ old('user_id') == $asesor->id ? 'selected' : '' }}
+            >
+                {{ $asesor->name }}
+            </option>
+        @endforeach
+    </select>
+
+    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+        Asesor encargado de comercializar y vender la propiedad.
+    </p>
+</div>
 
            <div>
     <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Inmueble</label>
@@ -285,7 +384,9 @@
                 <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase mb-1">
                     <i class="fa-solid fa-images mr-2"></i> Galería de Fotografías
                 </h3>
-                <p class="text-[10px] text-gray-400 mb-3">Selecciona una o varias fotografías. La primera imagen de la lista se usará como portada principal.</p>
+                <p class="text-[10px] text-gray-400 mb-3">
+    Selecciona una o varias fotografías. Arrastra las imágenes para cambiar su orden y usa ⭐ para elegir la portada principal.
+</p>
 
                 <!-- Campo para Subir Fotografías -->
                 <div class="mt-2">
@@ -301,7 +402,7 @@
                            onchange="previewNewImages(event)" 
                            class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#2C4A3E] file:text-white hover:file:bg-emerald-800 cursor-pointer border border-emerald-200 rounded-xl bg-[#FDFBF7] p-1 shadow-sm">
                     
-                    <p class="text-[10px] text-gray-400 mt-1">Puedes seleccionar varios archivos simultáneamente. La primera foto será la portada principal.</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Puedes seleccionar varios archivos. La fotografía que quede en primer lugar será la portada principal.</p>
 
                     <!-- Contenedor donde se previsualizan las imágenes antes de guardar -->
                     <div id="new-images-preview" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-3"></div>
@@ -352,89 +453,347 @@
     </form>
 </div>
 
+<!-- LIBRERÍA SORTABLE JS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
-// Objeto global para acumular múltiples selecciones de imágenes nuevas
+
+// =========================================================
+// GALERÍA DE IMÁGENES ANTES DE CREAR LA PROPIEDAD
+// =========================================================
+
 const selectedFilesDataTransfer = new DataTransfer();
 
-// Previsualización acumulativa de imágenes nuevas
-function previewNewImages(event) {
-    const input = event.target;
-    if (!input.files || input.files.length === 0) return;
+let pendingSortable = null;
 
-    // Agregar archivos seleccionados al acumulador
+
+// ---------------------------------------------------------
+// Agregar nuevas imágenes
+// ---------------------------------------------------------
+function previewNewImages(event) {
+
+    const input = event.target;
+
+    if (!input.files || input.files.length === 0) {
+        return;
+    }
+
     Array.from(input.files).forEach(file => {
+
         if (file.type.startsWith('image/')) {
             selectedFilesDataTransfer.items.add(file);
         }
+
     });
 
-    // Sincronizar el input HTML
     input.files = selectedFilesDataTransfer.files;
 
     renderPendingPreviews();
 }
 
-// Renderizar tarjetas de previsualización para archivos pendientes
+
+// ---------------------------------------------------------
+// Mostrar las imágenes seleccionadas
+// ---------------------------------------------------------
 function renderPendingPreviews() {
-    const previewContainer = document.getElementById('new-images-preview');
-    if (!previewContainer) return;
+
+    const previewContainer =
+        document.getElementById('new-images-preview');
+
+    if (!previewContainer) {
+        return;
+    }
 
     previewContainer.innerHTML = '';
 
-    Array.from(selectedFilesDataTransfer.files).forEach((file, index) => {
-        const reader = new FileReader();
+    Array.from(selectedFilesDataTransfer.files)
+        .forEach((file, index) => {
 
-        reader.onload = function (e) {
-            const card = document.createElement('div');
-            card.className = 'relative group bg-[#FDFBF7] border-2 border-dashed border-emerald-500 rounded-2xl overflow-hidden shadow-sm aspect-video flex items-center justify-center';
+            const reader = new FileReader();
 
-            card.innerHTML = `
-                <img src="${e.target.result}" class="w-full h-32 object-cover">
-                
-                ${index === 0 ? `
-                <span class="absolute top-2 left-2 z-10 bg-[#2C4A3E] text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                    <i class="fa-solid fa-star text-amber-300"></i> Portada
-                </span>
-                ` : `
-                <span class="absolute top-2 left-2 z-10 bg-emerald-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
-                    <i class="fa-solid fa-image"></i> Foto ${index + 1}
-                </span>
-                `}
+            reader.onload = function (e) {
 
-                <button type="button" 
-                        onclick="removePendingImage(${index})" 
-                        title="Quitar de la selección" 
-                        class="absolute top-2 right-2 z-10 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold transition shadow-sm">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            `;
+                const card = document.createElement('div');
 
-            previewContainer.appendChild(card);
-        };
+                card.className =
+                    'pending-image-card relative group bg-[#FDFBF7] ' +
+                    'border border-emerald-200 rounded-2xl overflow-hidden ' +
+                    'shadow-sm hover:shadow-md transition cursor-grab ' +
+                    'active:cursor-grabbing';
 
-        reader.readAsDataURL(file);
+                card.dataset.index = index;
+
+                card.innerHTML = `
+
+                    ${
+                        index === 0
+                            ? `
+                            <span class="pending-primary-badge absolute top-2 left-2 z-20
+                                         bg-[#2C4A3E] text-white text-[9px] font-extrabold
+                                         px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1">
+
+                                <i class="fa-solid fa-star text-amber-300"></i>
+                                Principal
+
+                            </span>
+                            `
+                            : `
+                            <span class="absolute top-2 left-2 z-10
+                                         bg-emerald-700 text-white text-[9px] font-extrabold
+                                         px-2 py-0.5 rounded-full shadow-sm">
+
+                                Foto ${index + 1}
+
+                            </span>
+                            `
+                    }
+
+                    <img
+                        src="${e.target.result}"
+                        class="w-full h-32 object-cover"
+                        alt="Fotografía pendiente"
+                    >
+
+                    <div class="absolute inset-0 bg-[#2C4A3E]/60
+                                opacity-0 group-hover:opacity-100
+                                transition-opacity flex items-center
+                                justify-center gap-2 backdrop-blur-[1px]">
+
+                        <button
+                            type="button"
+                            onclick="setPendingPrimary(${index})"
+                            title="Marcar como Foto Principal"
+                            class="bg-amber-500 hover:bg-amber-600
+                                   text-white w-8 h-8 rounded-xl
+                                   flex items-center justify-center
+                                   text-xs font-bold transition shadow-sm"
+                        >
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="removePendingImage(${index})"
+                            title="Quitar fotografía"
+                            class="bg-red-600 hover:bg-red-700
+                                   text-white w-8 h-8 rounded-xl
+                                   flex items-center justify-center
+                                   text-xs font-bold transition shadow-sm"
+                        >
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+
+                    </div>
+                `;
+
+                previewContainer.appendChild(card);
+
+                /*
+                 * Sortable se inicializa cuando ya se hayan
+                 * terminado de pintar todas las tarjetas.
+                 */
+                if (
+                    previewContainer.children.length ===
+                    selectedFilesDataTransfer.files.length
+                ) {
+                    initializePendingSortable();
+                }
+            };
+
+            reader.readAsDataURL(file);
+        });
+}
+
+
+// ---------------------------------------------------------
+// Inicializar arrastre de fotografías
+// ---------------------------------------------------------
+function initializePendingSortable() {
+
+    const gallery =
+        document.getElementById('new-images-preview');
+
+    if (!gallery) {
+        return;
+    }
+
+    if (pendingSortable) {
+        pendingSortable.destroy();
+    }
+
+    pendingSortable = new Sortable(gallery, {
+
+        animation: 150,
+
+        ghostClass: 'opacity-40',
+
+        dragClass: 'shadow-2xl',
+
+        onEnd: function () {
+
+            const newOrder = Array.from(
+                gallery.querySelectorAll('.pending-image-card')
+            ).map(card => Number(card.dataset.index));
+
+            reorderPendingFiles(newOrder);
+        }
     });
 }
 
-// Eliminar una imagen individual de la selección pendiente antes de guardar
-function removePendingImage(index) {
-    const input = document.getElementById('images-input');
-    const newDT = new DataTransfer();
 
-    Array.from(selectedFilesDataTransfer.files).forEach((file, i) => {
-        if (i !== index) {
-            newDT.items.add(file);
+// ---------------------------------------------------------
+// Reordenar realmente los archivos del input
+// ---------------------------------------------------------
+function reorderPendingFiles(order) {
+
+    const currentFiles =
+        Array.from(selectedFilesDataTransfer.files);
+
+    const newDT =
+        new DataTransfer();
+
+    order.forEach(index => {
+
+        if (currentFiles[index]) {
+            newDT.items.add(currentFiles[index]);
         }
+
     });
 
+    replacePendingFiles(newDT.files);
+
+    renderPendingPreviews();
+}
+
+
+// ---------------------------------------------------------
+// Elegir fotografía principal
+// La principal siempre ocupa la posición 0
+// ---------------------------------------------------------
+function setPendingPrimary(index) {
+
+    const files =
+        Array.from(selectedFilesDataTransfer.files);
+
+    if (!files[index]) {
+        return;
+    }
+
+    const selectedFile =
+        files[index];
+
+    files.splice(index, 1);
+
+    files.unshift(selectedFile);
+
+    const newDT =
+        new DataTransfer();
+
+    files.forEach(file => {
+        newDT.items.add(file);
+    });
+
+    replacePendingFiles(newDT.files);
+
+    renderPendingPreviews();
+}
+
+
+// ---------------------------------------------------------
+// Eliminar una fotografía pendiente
+// ---------------------------------------------------------
+function removePendingImage(index) {
+
+    const files =
+        Array.from(selectedFilesDataTransfer.files);
+
+    files.splice(index, 1);
+
+    const newDT =
+        new DataTransfer();
+
+    files.forEach(file => {
+        newDT.items.add(file);
+    });
+
+    replacePendingFiles(newDT.files);
+
+    renderPendingPreviews();
+}
+
+
+// ---------------------------------------------------------
+// Reemplazar acumulador y sincronizar input
+// ---------------------------------------------------------
+function replacePendingFiles(files) {
+
+    const input =
+        document.getElementById('images-input');
+
     selectedFilesDataTransfer.items.clear();
-    Array.from(newDT.files).forEach(file => selectedFilesDataTransfer.items.add(file));
+
+    Array.from(files).forEach(file => {
+        selectedFilesDataTransfer.items.add(file);
+    });
 
     if (input) {
         input.files = selectedFilesDataTransfer.files;
     }
-
-    renderPendingPreviews();
 }
+
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const captureOrigin =
+        document.getElementById('capture_origin');
+
+    const advisorContainer =
+        document.getElementById('capturing_advisor_container');
+
+    const advisorSelect =
+        document.getElementById('capturing_advisor_id');
+
+    if (
+        !captureOrigin ||
+        !advisorContainer ||
+        !advisorSelect
+    ) {
+        console.error(
+            'No se encontraron los campos de gestión comercial.'
+        );
+        return;
+    }
+
+    function updateCaptureFields() {
+
+        if (captureOrigin.value === 'advisor') {
+
+            advisorContainer.classList.remove('hidden');
+            advisorContainer.style.display = 'block';
+
+            advisorSelect.disabled = false;
+            advisorSelect.required = true;
+
+        } else {
+
+            advisorContainer.classList.add('hidden');
+            advisorContainer.style.display = 'none';
+
+            advisorSelect.required = false;
+            advisorSelect.disabled = true;
+            advisorSelect.value = '';
+        }
+    }
+
+    captureOrigin.addEventListener(
+        'change',
+        updateCaptureFields
+    );
+
+    updateCaptureFields();
+});
+</script>
+
 @endsection

@@ -167,65 +167,102 @@ if ($request->filled('max_price') && (float)$request->max_price > 0) {
     }
 
     // Guardar la nueva propiedad
-    public function store(Request $request)
-    {
-        $request->validate([
-            'title'         => 'required|string|max:255',
-            'property_type' => 'required|string',
-            'service_type'  => 'required|string',
-            'price'         => 'required|numeric',
-            'user_id'       => 'required|exists:users,id',
-        ]);
+   public function store(Request $request)
+{
+    $request->validate([
+        'title'         => 'required|string|max:255',
+        'property_type' => 'required|string',
+        'service_type'  => 'required|string',
+        'price'         => 'required|numeric',
+        'user_id'       => 'required|exists:users,id',
 
-        $data = $request->all();
+        // Gestión comercial
+        'capture_origin' => 'required|in:agency,advisor',
 
-        if (empty($data['status'])) {
-            $data['status'] = 'En Venta';
-        }
+        'capturing_advisor_id' => [
+            'nullable',
+            'exists:users,id',
+            'required_if:capture_origin,advisor',
+        ],
+    ]);
 
-        // Checkboxes y características a valores booleanos (0 o 1)
-        $data['price_dropped']       = (int) $request->input('price_dropped', 0);
-        $data['has_jardin']        = $request->has('has_jardin') ? 1 : 0;
-        $data['has_balcon']        = $request->has('has_balcon') ? 1 : 0;
-        $data['has_seguridad']     = $request->has('has_seguridad') ? 1 : 0;
-        $data['has_agua']          = $request->has('has_agua') ? 1 : 0;
-        $data['has_luz']           = $request->has('has_luz') ? 1 : 0;
-        $data['has_alcantarillado']= $request->has('has_alcantarillado') ? 1 : 0;
-        $data['has_internet']      = $request->has('has_internet') ? 1 : 0;
-        $data['has_piscina']       = $request->has('has_piscina') ? 1 : 0;
-        $data['has_bbq']           = $request->has('has_bbq') ? 1 : 0;
-        $data['has_amoblado']      = $request->has('has_amoblado') ? 1 : 0;
-        $data['has_mascotas']      = $request->has('has_mascotas') ? 1 : 0;
+    $data = $request->all();
 
-        if (isset($data['basic_services']) && is_array($data['basic_services'])) {
-            $data['basic_services'] = json_encode($data['basic_services']);
-        }
+    /*
+    |--------------------------------------------------------------------------
+    | GESTIÓN COMERCIAL
+    |--------------------------------------------------------------------------
+    |
+    | user_id = asesor responsable / vendedor
+    | capture_origin = inmobiliaria o asesor
+    | capturing_advisor_id = asesor captador si corresponde
+    |
+    */
 
-        $data['social_info_completed'] = (
-            !empty($data['url_youtube']) &&
-            !empty($data['url_instagram']) &&
-            !empty($data['url_tiktok']) &&
-            !empty($data['url_facebook']) &&
-            !empty($data['contact_phone']) &&
-            !empty($data['contact_email'])
-        ) ? 1 : 0;
-
-        $property = Property::create($data);
-
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('properties', 'public');
-                
-                PropertyImage::create([
-                    'property_id' => $property->id,
-                    'image_path'  => $path,
-                ]);
-            }
-        }
-
-        return redirect('/intranet/properties')->with('success', '¡Propiedad guardada exitosamente!');
+    if (($data['capture_origin'] ?? 'agency') === 'agency') {
+        $data['capturing_advisor_id'] = null;
     }
 
+    if (empty($data['status'])) {
+        $data['status'] = 'En Venta';
+    }
+
+    // Checkboxes y características a valores booleanos (0 o 1)
+    $data['price_dropped'] = (int) $request->input('price_dropped', 0);
+
+    $data['has_jardin'] = $request->has('has_jardin') ? 1 : 0;
+    $data['has_balcon'] = $request->has('has_balcon') ? 1 : 0;
+    $data['has_seguridad'] = $request->has('has_seguridad') ? 1 : 0;
+    $data['has_agua'] = $request->has('has_agua') ? 1 : 0;
+    $data['has_luz'] = $request->has('has_luz') ? 1 : 0;
+    $data['has_alcantarillado'] = $request->has('has_alcantarillado') ? 1 : 0;
+    $data['has_internet'] = $request->has('has_internet') ? 1 : 0;
+    $data['has_piscina'] = $request->has('has_piscina') ? 1 : 0;
+    $data['has_bbq'] = $request->has('has_bbq') ? 1 : 0;
+    $data['has_amoblado'] = $request->has('has_amoblado') ? 1 : 0;
+    $data['has_mascotas'] = $request->has('has_mascotas') ? 1 : 0;
+
+    if (
+        isset($data['basic_services']) &&
+        is_array($data['basic_services'])
+    ) {
+        $data['basic_services'] = json_encode(
+            $data['basic_services']
+        );
+    }
+
+    $data['social_info_completed'] = (
+        !empty($data['url_youtube']) &&
+        !empty($data['url_instagram']) &&
+        !empty($data['url_tiktok']) &&
+        !empty($data['url_facebook']) &&
+        !empty($data['contact_phone']) &&
+        !empty($data['contact_email'])
+    ) ? 1 : 0;
+
+    $property = Property::create($data);
+
+    if ($request->hasFile('images')) {
+        foreach ($request->file('images') as $image) {
+
+            $path = $image->store(
+                'properties',
+                'public'
+            );
+
+            PropertyImage::create([
+                'property_id' => $property->id,
+                'image_path' => $path,
+            ]);
+        }
+    }
+
+    return redirect('/intranet/properties')
+        ->with(
+            'success',
+            '¡Propiedad guardada exitosamente!'
+        );
+}
     // Mostrar detalles
     public function show(Property $property)
     {
@@ -265,90 +302,214 @@ if ($request->filled('max_price') && (float)$request->max_price > 0) {
 
     // Actualizar
     public function update(Request $request, Property $property)
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
 
-        if ($user && $user->role === 'Asesor') {
-            $request->validate([
-                'url_youtube'    => 'nullable|string|max:255',
-                'url_instagram'  => 'nullable|string|max:255',
-                'url_tiktok'     => 'nullable|string|max:255',
-                'url_facebook'   => 'nullable|string|max:255',
-                'contact_phone' => 'nullable|string|max:20',
-                'contact_email'  => 'nullable|email|max:255',
-            ]);
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZACIÓN POR ASESOR
+    |--------------------------------------------------------------------------
+    |
+    | El asesor únicamente puede actualizar:
+    | - Redes sociales
+    | - Teléfono de contacto
+    | - Correo de contacto
+    |
+    | NO puede modificar:
+    | - Asesor responsable
+    | - Origen de captación
+    | - Asesor captador
+    | - Información administrativa de la propiedad
+    |
+    */
 
-            $data = $request->only([
-                'url_youtube', 
-                'url_instagram', 
-                'url_tiktok', 
-                'url_facebook', 
-                'contact_phone', 
-                'contact_email'
-            ]);
+    if ($user && $user->role === 'Asesor') {
 
-            $advisorFieldsCompleted = !empty($data['url_youtube']) &&
-                                      !empty($data['url_instagram']) &&
-                                      !empty($data['url_tiktok']) &&
-                                      !empty($data['url_facebook']) &&
-                                      !empty($data['contact_phone']) &&
-                                      !empty($data['contact_email']);
+        $request->validate([
+            'url_youtube'   => 'nullable|string|max:255',
+            'url_instagram' => 'nullable|string|max:255',
+            'url_tiktok'    => 'nullable|string|max:255',
+            'url_facebook'  => 'nullable|string|max:255',
+            'contact_phone' => 'nullable|string|max:20',
+            'contact_email' => 'nullable|email|max:255',
+        ]);
 
-            $data['social_info_completed'] = $advisorFieldsCompleted ? 1 : 0;
+        $data = $request->only([
+            'url_youtube',
+            'url_instagram',
+            'url_tiktok',
+            'url_facebook',
+            'contact_phone',
+            'contact_email',
+        ]);
 
-        } else {
-            $request->validate([
-                'title'        => 'required|string|max:255',
-                'price'        => 'required|numeric',
-                'service_type' => 'required|string',
-            ]);
+        $advisorFieldsCompleted =
+            !empty($data['url_youtube']) &&
+            !empty($data['url_instagram']) &&
+            !empty($data['url_tiktok']) &&
+            !empty($data['url_facebook']) &&
+            !empty($data['contact_phone']) &&
+            !empty($data['contact_email']);
 
-            $data = $request->all();
+        $data['social_info_completed'] =
+            $advisorFieldsCompleted ? 1 : 0;
 
-            $data['price_dropped']       = (int) $request->input('price_dropped', 0);
-            $data['has_jardin']        = $request->has('has_jardin') ? 1 : 0;
-            $data['has_balcon']        = $request->has('has_balcon') ? 1 : 0;
-            $data['has_seguridad']     = $request->has('has_seguridad') ? 1 : 0;
-            $data['has_agua']          = $request->has('has_agua') ? 1 : 0;
-            $data['has_luz']           = $request->has('has_luz') ? 1 : 0;
-            $data['has_alcantarillado']= $request->has('has_alcantarillado') ? 1 : 0;
-            $data['has_internet']      = $request->has('has_internet') ? 1 : 0;
-            $data['has_piscina']       = $request->has('has_piscina') ? 1 : 0;
-            $data['has_bbq']           = $request->has('has_bbq') ? 1 : 0;
-            $data['has_amoblado']      = $request->has('has_amoblado') ? 1 : 0;
-            $data['has_mascotas']      = $request->has('has_mascotas') ? 1 : 0;
+    } else {
 
-            if (isset($data['basic_services']) && is_array($data['basic_services'])) {
-                $data['basic_services'] = json_encode($data['basic_services']);
-            }
+        /*
+        |--------------------------------------------------------------------------
+        | ACTUALIZACIÓN ADMINISTRATIVA
+        |--------------------------------------------------------------------------
+        */
 
-            $data['social_info_completed'] = (
-                !empty($data['url_youtube']) &&
-                !empty($data['url_instagram']) &&
-                !empty($data['url_tiktok']) &&
-                !empty($data['url_facebook']) &&
-                !empty($data['contact_phone']) &&
-                !empty($data['contact_email'])
-            ) ? 1 : 0;
+        $request->validate([
+            'title'        => 'required|string|max:255',
+            'price'        => 'required|numeric',
+            'service_type' => 'required|string',
+
+            // Asesor responsable / vendedor
+            'user_id' => 'required|exists:users,id',
+
+            // Gestión comercial
+            'capture_origin' => 'required|in:agency,advisor',
+
+            'capturing_advisor_id' => [
+                'nullable',
+                'exists:users,id',
+                'required_if:capture_origin,advisor',
+            ],
+        ]);
+
+        $data = $request->all();
+
+        /*
+        |--------------------------------------------------------------------------
+        | GESTIÓN COMERCIAL
+        |--------------------------------------------------------------------------
+        |
+        | user_id
+        | = asesor responsable / vendedor
+        |
+        | capture_origin
+        | = agency / advisor
+        |
+        | capturing_advisor_id
+        | = asesor que captó la propiedad
+        |
+        */
+
+        if (($data['capture_origin'] ?? 'agency') === 'agency') {
+            $data['capturing_advisor_id'] = null;
         }
 
-        $property->update($data);
+        /*
+        |--------------------------------------------------------------------------
+        | CHECKBOXES
+        |--------------------------------------------------------------------------
+        */
 
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('properties', 'public');
-                
-                PropertyImage::create([
-                    'property_id' => $property->id,
-                    'image_path'  => $path,
-                ]);
-            }
+        $data['price_dropped'] =
+            (int) $request->input('price_dropped', 0);
+
+        $data['has_jardin'] =
+            $request->has('has_jardin') ? 1 : 0;
+
+        $data['has_balcon'] =
+            $request->has('has_balcon') ? 1 : 0;
+
+        $data['has_seguridad'] =
+            $request->has('has_seguridad') ? 1 : 0;
+
+        $data['has_agua'] =
+            $request->has('has_agua') ? 1 : 0;
+
+        $data['has_luz'] =
+            $request->has('has_luz') ? 1 : 0;
+
+        $data['has_alcantarillado'] =
+            $request->has('has_alcantarillado') ? 1 : 0;
+
+        $data['has_internet'] =
+            $request->has('has_internet') ? 1 : 0;
+
+        $data['has_piscina'] =
+            $request->has('has_piscina') ? 1 : 0;
+
+        $data['has_bbq'] =
+            $request->has('has_bbq') ? 1 : 0;
+
+        $data['has_amoblado'] =
+            $request->has('has_amoblado') ? 1 : 0;
+
+        $data['has_mascotas'] =
+            $request->has('has_mascotas') ? 1 : 0;
+
+        /*
+        |--------------------------------------------------------------------------
+        | SERVICIOS BÁSICOS
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            isset($data['basic_services']) &&
+            is_array($data['basic_services'])
+        ) {
+            $data['basic_services'] =
+                json_encode($data['basic_services']);
         }
 
-        return redirect('/intranet/properties')->with('success', '¡Propiedad actualizada correctamente!');
+        /*
+        |--------------------------------------------------------------------------
+        | INFORMACIÓN SOCIAL COMPLETA
+        |--------------------------------------------------------------------------
+        */
+
+        $data['social_info_completed'] = (
+            !empty($data['url_youtube']) &&
+            !empty($data['url_instagram']) &&
+            !empty($data['url_tiktok']) &&
+            !empty($data['url_facebook']) &&
+            !empty($data['contact_phone']) &&
+            !empty($data['contact_email'])
+        ) ? 1 : 0;
     }
 
-    // Eliminar
+    /*
+    |--------------------------------------------------------------------------
+    | ACTUALIZAR PROPIEDAD
+    |--------------------------------------------------------------------------
+    */
+
+    $property->update($data);
+
+    /*
+    |--------------------------------------------------------------------------
+    | NUEVAS IMÁGENES
+    |--------------------------------------------------------------------------
+    */
+
+    if ($request->hasFile('images')) {
+
+        foreach ($request->file('images') as $image) {
+
+            $path = $image->store(
+                'properties',
+                'public'
+            );
+
+            PropertyImage::create([
+                'property_id' => $property->id,
+                'image_path'  => $path,
+            ]);
+        }
+    }
+
+    return redirect('/intranet/properties')
+        ->with(
+            'success',
+            '¡Propiedad actualizada correctamente!'
+        );
+}    // Eliminar
     public function destroy(Property $property)
     {
         foreach ($property->images as $img) {

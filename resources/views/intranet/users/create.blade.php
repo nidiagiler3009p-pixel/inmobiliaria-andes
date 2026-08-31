@@ -47,10 +47,10 @@
                 <div>
                     <label class="block text-sm font-semibold text-[#1E392A] mb-1">Tipo de Asesoría</label>
                     <select name="plan_type" class="w-full border border-[#D8D3C8] rounded-xl p-3 bg-white text-gray-700">
-                        <option value="General">General</option>
-                        <option value="Comercial">Comercial</option>
-                        <option value="Legal">Legal</option>
-                        <option value="Financiera">Financiera</option>
+                        <option value="General">Gratis</option>
+                        <option value="Comercial">Estandar</option>
+                        <option value="Legal">Total</option>
+                        <option value="Financiera">Otros</option>
                     </select>
                 </div>
                 <div>
@@ -68,6 +68,7 @@
                         <option value="Avalúos">Avalúos</option>
                         <option value="Certificados">Certificados</option>
                         <option value="Municipal">Municipal</option>
+                        <option value="Municipal">Otros/Multimedia</option>
                     </select>
                 </div>
                  <div>

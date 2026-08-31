@@ -12,8 +12,12 @@ class Property extends Model
     protected $table = 'properties';
 
     protected $fillable = [
+
         'service_type',
         'user_id',
+        'capture_origin',
+'capturing_advisor_id',
+
         'property_type',
         'title',
         'owner_name',
@@ -89,22 +93,31 @@ class Property extends Model
         'construction_area_m2' => 'decimal:2',
     ];
 
-  public function images()
+public function images()
 {
-    return $this->hasMany(PropertyImage::class)->orderBy('position', 'asc');
+    return $this->hasMany(PropertyImage::class)
+        ->orderBy('position', 'asc');
 }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+public function user()
+{
+    return $this->belongsTo(User::class);
+}
 
-    public function appointmentTrackings()
-    {
-        return $this->hasMany(AppointmentTracking::class);
-    }
+public function capturingAdvisor()
+{
+    return $this->belongsTo(
+        User::class,
+        'capturing_advisor_id'
+    );
+}
 
-    public function portfolioEntries()
+public function appointmentTrackings()
+{
+    return $this->hasMany(AppointmentTracking::class);
+}
+
+public function portfolioEntries()
 {
     return $this->hasMany(ClientPortfolioEntry::class);
 }

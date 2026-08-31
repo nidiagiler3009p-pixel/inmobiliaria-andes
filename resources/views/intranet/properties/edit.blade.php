@@ -24,16 +24,116 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-bold text-[#2C4A3E]">
             
-            <!-- 1. Clasificación y Gestión Interna -->
-            <div class="md:col-span-2">
-                <label class="block mb-2 uppercase text-[10px] text-gray-500">Asesor Responsable / Asignado</label>
-                <select name="user_id" required class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
-                    <option value="">Seleccione un asesor...</option>
-                    @foreach($asesores as $asesor)
-                        <option value="{{ $asesor->id }}" {{ old('user_id', $property->user_id) == $asesor->id ? 'selected' : '' }}>{{ $asesor->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+<!-- 1. Clasificación y Gestión Comercial -->
+<div class="md:col-span-2 pt-1">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h3 class="text-xs font-extrabold text-[#2C4A3E] uppercase">
+                <i class="fa-solid fa-briefcase mr-2"></i>
+                Gestión Comercial
+            </h3>
+
+            <p class="text-[10px] text-gray-400 font-medium mt-1">
+                Define cómo ingresó la propiedad y quién es responsable de su comercialización.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Origen de captación -->
+<div>
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">
+        Origen de Captación
+    </label>
+
+    <select
+        name="capture_origin"
+        id="capture_origin"
+        required
+        class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+    >
+        <option
+            value="agency"
+            {{ old('capture_origin', $property->capture_origin ?? 'agency') === 'agency' ? 'selected' : '' }}
+        >
+            Inmobiliaria
+        </option>
+
+        <option
+            value="advisor"
+            {{ old('capture_origin', $property->capture_origin ?? 'agency') === 'advisor' ? 'selected' : '' }}
+        >
+            Asesor
+        </option>
+    </select>
+
+    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+        Indica quién consiguió originalmente la propiedad.
+    </p>
+</div>
+
+<!-- Asesor captador -->
+<div
+    id="capturing_advisor_container"
+    class="{{ old('capture_origin', $property->capture_origin ?? 'agency') === 'advisor' ? '' : 'hidden' }}"
+>
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">
+        Asesor Captador
+    </label>
+
+    <select
+        name="capturing_advisor_id"
+        id="capturing_advisor_id"
+        class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+    >
+        <option value="">
+            Seleccione el asesor que captó la propiedad...
+        </option>
+
+        @foreach($asesores as $asesor)
+            <option
+                value="{{ $asesor->id }}"
+                {{ old('capturing_advisor_id', $property->capturing_advisor_id) == $asesor->id ? 'selected' : '' }}
+            >
+                {{ $asesor->name }}
+            </option>
+        @endforeach
+    </select>
+
+    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+        Solo aplica cuando la propiedad fue captada directamente por un asesor.
+    </p>
+</div>
+
+<!-- Asesor responsable / vendedor -->
+<div class="md:col-span-2">
+    <label class="block mb-2 uppercase text-[10px] text-gray-500">
+        Asesor Responsable / Asignado
+    </label>
+
+    <select
+        name="user_id"
+        required
+        class="w-full bg-[#FDFBF7] border border-emerald-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+    >
+        <option value="">
+            Seleccione el asesor responsable...
+        </option>
+
+        @foreach($asesores as $asesor)
+            <option
+                value="{{ $asesor->id }}"
+                {{ old('user_id', $property->user_id) == $asesor->id ? 'selected' : '' }}
+            >
+                {{ $asesor->name }}
+            </option>
+        @endforeach
+    </select>
+
+    <p class="mt-1 text-[9px] text-gray-400 font-medium">
+        Asesor encargado de comercializar y vender la propiedad.
+    </p>
+</div>
 
 <div>
     <label class="block mb-2 uppercase text-[10px] text-gray-500">Tipo de Inmueble</label>
@@ -600,4 +700,55 @@ function removePendingImage(index) {
     renderPendingPreviews();
 }
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const captureOrigin =
+        document.getElementById('capture_origin');
+
+    const advisorContainer =
+        document.getElementById('capturing_advisor_container');
+
+    const advisorSelect =
+        document.getElementById('capturing_advisor_id');
+
+    if (!captureOrigin || !advisorContainer || !advisorSelect) {
+        console.error(
+            'No se encontraron los campos de gestión comercial.'
+        );
+        return;
+    }
+
+    function updateCaptureFields() {
+
+        if (captureOrigin.value === 'advisor') {
+
+            advisorContainer.classList.remove('hidden');
+            advisorContainer.style.display = 'block';
+
+            advisorSelect.disabled = false;
+            advisorSelect.required = true;
+
+        } else {
+
+            advisorContainer.classList.add('hidden');
+            advisorContainer.style.display = 'none';
+
+            advisorSelect.required = false;
+            advisorSelect.disabled = true;
+            advisorSelect.value = '';
+        }
+    }
+
+    captureOrigin.addEventListener(
+        'change',
+        updateCaptureFields
+    );
+
+    updateCaptureFields();
+});
+</script>
+
+
+
 @endsection

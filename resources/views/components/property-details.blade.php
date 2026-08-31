@@ -78,7 +78,88 @@
             </div>
         </div>
     @endif
+{{-- PANEL INTRANET (GESTIÓN COMERCIAL) --}}
+@if($isIntranet)
+    <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1.5 shadow-2xs">
 
+        <div class="flex items-center gap-1.5 border-b border-emerald-200/60 pb-1">
+            <i class="fa-solid fa-briefcase text-emerald-700 text-[10px]"></i>
+
+            <h3 class="font-extrabold text-[9px] text-emerald-900 uppercase tracking-wider">
+                Gestión Comercial
+            </h3>
+        </div>
+
+        <div class="grid grid-cols-1 gap-1.5 text-[10px] font-bold text-gray-700">
+
+            {{-- ORIGEN DE CAPTACIÓN --}}
+            <div class="flex items-center gap-1.5">
+
+                <i class="fa-solid fa-building text-emerald-600 w-3 text-center"></i>
+
+                <span class="text-gray-400 font-normal">
+                    Captada por:
+                </span>
+
+                <span class="text-gray-900">
+
+                    @if(($property->capture_origin ?? 'agency') === 'advisor')
+                        Asesor
+                    @else
+                        Inmobiliaria
+                    @endif
+
+                </span>
+
+            </div>
+
+
+            {{-- ASESOR CAPTADOR --}}
+            @if(
+                ($property->capture_origin ?? 'agency') === 'advisor'
+                && $property->capturingAdvisor
+            )
+
+                <div class="flex items-center gap-1.5">
+
+                    <i class="fa-solid fa-user-plus text-emerald-600 w-3 text-center"></i>
+
+                    <span class="text-gray-400 font-normal">
+                        Asesor captador:
+                    </span>
+
+                    <span class="text-gray-900">
+                        {{ $property->capturingAdvisor->name }}
+                    </span>
+
+                </div>
+
+            @endif
+
+
+            {{-- ASESOR RESPONSABLE --}}
+            @if($property->user)
+
+                <div class="flex items-center gap-1.5">
+
+                    <i class="fa-solid fa-user-tie text-emerald-600 w-3 text-center"></i>
+
+                    <span class="text-gray-400 font-normal">
+                        Asesor responsable:
+                    </span>
+
+                    <span class="text-gray-900">
+                        {{ $property->user->name }}
+                    </span>
+
+                </div>
+
+            @endif
+
+        </div>
+
+    </div>
+@endif
    {{-- 1. CONTENEDOR UBICACIÓN --}}
 @if(
     !empty($property->address) ||
@@ -87,6 +168,7 @@
     !empty($property->badge_right) ||
     !empty($property->google_maps_url)
 )
+
     <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
 
         {{-- ENCABEZADO --}}
