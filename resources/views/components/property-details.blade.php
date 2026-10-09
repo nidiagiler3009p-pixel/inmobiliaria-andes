@@ -48,12 +48,18 @@
         </div>
     @endif
 
-    {{-- TÍTULO CENTRADO Y COMPACTO --}}
-<div class="text-center py-1 px-2">
-    <div class="text-[20px] font-black text-gray-900 leading-tight">
-        {{ $property->title ?? 'Propiedad Sin Título' }}
+    {{-- TÍTULO DE LA PROPIEDAD - COMPACTO --}}
+    <div class="text-center px-2 py-1.5">
+        <h1 class="text-[19px] font-black text-[#2C4A3E] leading-tight tracking-tight">
+            {{ $property->title ?? 'Propiedad Sin Título' }}
+        </h1>
+
+        <div class="flex items-center justify-center gap-1.5 mt-1">
+            <span class="w-7 h-[2px] bg-emerald-200 rounded-full"></span>
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+            <span class="w-7 h-[2px] bg-emerald-200 rounded-full"></span>
+        </div>
     </div>
-</div>
 
     {{-- PANEL INTRANET (PROPIETARIO) --}}
     @if($isIntranet)
@@ -286,6 +292,174 @@
 
 </div>
 
+ {{-- 7. DESCRIPCIÓN DETALLADA --}}
+@if(!empty($property->description))
+
+    <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
+
+<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+    <i class="fa-solid fa-location-dot text-emerald-600"></i>
+    Descripción Detallada
+</div>
+
+        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+
+            <p class="text-[12px] text-gray-600 leading-relaxed whitespace-pre-line">
+                {{ $property->description }}
+            </p>
+
+        </div>
+
+    </div>
+
+@endif
+
+   {{-- 6. ADICIONAL Y ÁREAS --}}
+
+@php
+    $hasAdditionalInfo =
+        !empty($property->documentation_status) ||
+        !empty($property->antiquity_years);
+
+    $hasAreaInfo =
+        !empty($property->land_area_m2) ||
+        !empty($property->construction_area_m2);
+@endphp
+
+@if($hasAdditionalInfo || $hasAreaInfo)
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+        {{-- INFORMACIÓN ADICIONAL --}}
+        @if($hasAdditionalInfo)
+
+            <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
+
+<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+    <i class="fa-solid fa-location-dot text-emerald-600"></i>
+    Información Adicional
+</div>
+
+                <div class="space-y-1.5">
+
+                    @if(!empty($property->documentation_status))
+
+                        <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-start gap-2">
+
+                            <div class="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-file-circle-check text-emerald-600 text-[10px]"></i>
+                            </div>
+
+                            <div>
+                                <span class="text-[8px] text-gray-400 font-black uppercase block">
+                                    Documentación en Regla
+                                </span>
+
+                                <span class="text-[10px] font-extrabold text-gray-800">
+                                    {{ $property->documentation_status }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                    @endif
+
+
+                    @if(!empty($property->antiquity_years))
+
+                        <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-start gap-2">
+
+                            <div class="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-clock-rotate-left text-emerald-600 text-[10px]"></i>
+                            </div>
+
+                            <div>
+                                <span class="text-[8px] text-gray-400 font-black uppercase block">
+                                    Antigüedad
+                                </span>
+
+                                <span class="text-[10px] font-extrabold text-gray-800">
+                                    {{ $property->antiquity_years }} años
+                                </span>
+                            </div>
+
+                        </div>
+
+                    @endif
+
+                </div>
+
+            </div>
+
+        @endif
+
+
+        {{-- ÁREAS --}}
+        @if($hasAreaInfo)
+
+            <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
+
+<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
+    <i class="fa-solid fa-location-dot text-emerald-600"></i>
+    Áreas
+</div>
+
+                <div class="space-y-1.5">
+
+                    @if(!empty($property->land_area_m2))
+
+                        <div class="p-2 bg-emerald-50/70 rounded-lg border border-emerald-100 flex items-start gap-2">
+
+                            <div class="w-6 h-6 rounded-full bg-white border border-emerald-200 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-vector-square text-emerald-600 text-[10px]"></i>
+                            </div>
+
+                            <div>
+                                <span class="text-[8px] text-gray-400 font-black uppercase block">
+                                    Terreno
+                                </span>
+
+                                <span class="text-[11px] font-black text-gray-800">
+                                    {{ number_format((float)$property->land_area_m2, 2) }} m²
+                                </span>
+                            </div>
+
+                        </div>
+
+                    @endif
+
+
+                    @if(!empty($property->construction_area_m2))
+
+                        <div class="p-2 bg-emerald-50/70 rounded-lg border border-emerald-100 flex items-start gap-2">
+
+                            <div class="w-6 h-6 rounded-full bg-white border border-emerald-200 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-building text-emerald-600 text-[10px]"></i>
+                            </div>
+
+                            <div>
+                                <span class="text-[8px] text-gray-400 font-black uppercase block">
+                                    Construcción
+                                </span>
+
+                                <span class="text-[11px] font-black text-gray-800">
+                                    {{ number_format((float)$property->construction_area_m2, 2) }} m²
+                                </span>
+                            </div>
+
+                        </div>
+
+                    @endif
+
+                </div>
+
+            </div>
+
+        @endif
+
+    </div>
+
+@endif
 
     {{-- 3. DETALLES DE LA PROPIEDAD --}}
 
@@ -449,174 +623,6 @@
                 @endif
 
             @endforeach
-
-        </div>
-
-    </div>
-
-@endif
-
-   {{-- 6. ADICIONAL Y ÁREAS --}}
-
-@php
-    $hasAdditionalInfo =
-        !empty($property->documentation_status) ||
-        !empty($property->antiquity_years);
-
-    $hasAreaInfo =
-        !empty($property->land_area_m2) ||
-        !empty($property->construction_area_m2);
-@endphp
-
-@if($hasAdditionalInfo || $hasAreaInfo)
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-
-        {{-- INFORMACIÓN ADICIONAL --}}
-        @if($hasAdditionalInfo)
-
-            <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
-
-<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
-    <i class="fa-solid fa-location-dot text-emerald-600"></i>
-    Información Adicional
-</div>
-
-                <div class="space-y-1.5">
-
-                    @if(!empty($property->documentation_status))
-
-                        <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-start gap-2">
-
-                            <div class="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-file-circle-check text-emerald-600 text-[10px]"></i>
-                            </div>
-
-                            <div>
-                                <span class="text-[8px] text-gray-400 font-black uppercase block">
-                                    Documentación en Regla
-                                </span>
-
-                                <span class="text-[10px] font-extrabold text-gray-800">
-                                    {{ $property->documentation_status }}
-                                </span>
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($property->antiquity_years))
-
-                        <div class="p-2 bg-gray-50 rounded-lg border border-gray-100 flex items-start gap-2">
-
-                            <div class="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-clock-rotate-left text-emerald-600 text-[10px]"></i>
-                            </div>
-
-                            <div>
-                                <span class="text-[8px] text-gray-400 font-black uppercase block">
-                                    Antigüedad
-                                </span>
-
-                                <span class="text-[10px] font-extrabold text-gray-800">
-                                    {{ $property->antiquity_years }} años
-                                </span>
-                            </div>
-
-                        </div>
-
-                    @endif
-
-                </div>
-
-            </div>
-
-        @endif
-
-
-        {{-- ÁREAS --}}
-        @if($hasAreaInfo)
-
-            <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
-
-<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
-    <i class="fa-solid fa-location-dot text-emerald-600"></i>
-    Áreas
-</div>
-
-                <div class="space-y-1.5">
-
-                    @if(!empty($property->land_area_m2))
-
-                        <div class="p-2 bg-emerald-50/70 rounded-lg border border-emerald-100 flex items-start gap-2">
-
-                            <div class="w-6 h-6 rounded-full bg-white border border-emerald-200 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-vector-square text-emerald-600 text-[10px]"></i>
-                            </div>
-
-                            <div>
-                                <span class="text-[8px] text-gray-400 font-black uppercase block">
-                                    Terreno
-                                </span>
-
-                                <span class="text-[11px] font-black text-gray-800">
-                                    {{ number_format((float)$property->land_area_m2, 2) }} m²
-                                </span>
-                            </div>
-
-                        </div>
-
-                    @endif
-
-
-                    @if(!empty($property->construction_area_m2))
-
-                        <div class="p-2 bg-emerald-50/70 rounded-lg border border-emerald-100 flex items-start gap-2">
-
-                            <div class="w-6 h-6 rounded-full bg-white border border-emerald-200 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-building text-emerald-600 text-[10px]"></i>
-                            </div>
-
-                            <div>
-                                <span class="text-[8px] text-gray-400 font-black uppercase block">
-                                    Construcción
-                                </span>
-
-                                <span class="text-[11px] font-black text-gray-800">
-                                    {{ number_format((float)$property->construction_area_m2, 2) }} m²
-                                </span>
-                            </div>
-
-                        </div>
-
-                    @endif
-
-                </div>
-
-            </div>
-
-        @endif
-
-    </div>
-
-@endif
- {{-- 7. DESCRIPCIÓN DETALLADA --}}
-@if(!empty($property->description))
-
-    <div class="p-2.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
-
-<div class="font-black text-[11px] text-gray-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-gray-100 pb-1.5">
-    <i class="fa-solid fa-location-dot text-emerald-600"></i>
-    Descripción Detallada
-</div>
-
-        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-
-            <p class="text-[12px] text-gray-600 leading-relaxed whitespace-pre-line">
-                {{ $property->description }}
-            </p>
 
         </div>
 
@@ -881,48 +887,6 @@
             @endif
 
         </div>
-
-    </div>
-
-@endif
-
-    {{-- BOTÓN PÚBLICO --}}
-{{-- ACCIÓN PÚBLICA: MENSAJE / CITA --}}
-@if($isPublic)
-
-    <div class="pt-1">
-
-        <button
-            type="button"
-            onclick="toggleClientModal('{{ $propId }}', true)"
-            class="group w-full bg-[#2d4a3e] hover:bg-[#233a30] text-white rounded-xl p-3 transition shadow-md shadow-[#2d4a3e]/20"
-        >
-
-            <div class="flex items-center gap-3">
-
-                <div class="w-9 h-9 bg-white/10 group-hover:bg-white/15 rounded-full flex items-center justify-center shrink-0 transition">
-
-                    <i class="fa-solid fa-calendar-check text-emerald-300"></i>
-
-                </div>
-
-                <div class="text-left flex-1">
-
-                    <span class="text-[12px] text-emerald-200 font-black uppercase tracking-wider block">
-                        ¿Interesado en esta propiedad?
-                    </span>
-
-                    <span class="text-[11px] font-black block">
-                        Envianos tu Mensaje / Agenda tu Cita
-                    </span>
-
-                </div>
-
-                <i class="fa-solid fa-chevron-right text-[10px] text-emerald-200 group-hover:translate-x-0.5 transition-transform"></i>
-
-            </div>
-
-        </button>
 
     </div>
 
